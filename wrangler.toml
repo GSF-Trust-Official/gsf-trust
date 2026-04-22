@@ -1,0 +1,14 @@
+name = "gsf-accounts"
+compatibility_date = "2024-01-01"
+compatibility_flags = ["nodejs_compat"]
+
+pages_build_output_dir = ".vercel/output/static"
+
+[[d1_databases]]
+binding = "DB"
+database_name = "gsf-accounts-db"
+database_id = "REPLACE_WITH_ACTUAL_ID"
+
+[[r2_buckets]]
+binding = "STORAGE"
+bucket_name = "gsf-accounts-files"
