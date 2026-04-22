@@ -1,12 +1,13 @@
-import type { D1Database, R2Bucket } from "@cloudflare/workers-types";
+import type { D1Database } from "@cloudflare/workers-types";
 
-// Cloudflare Workers environment bindings
+// Cloudflare Workers environment bindings.
+// File exports (PDF/Excel) go to Google Drive — no R2 binding needed.
 export interface Env {
   DB: D1Database;
-  STORAGE: R2Bucket;
   JWT_SECRET: string;
   RESEND_API_KEY: string;
   GOOGLE_DRIVE_FOLDER_ID: string;
+  GOOGLE_DRIVE_SERVICE_ACCOUNT_JSON: string;
 }
 
 // Extracts the D1 database from the Cloudflare env.

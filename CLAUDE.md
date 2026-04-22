@@ -49,7 +49,7 @@ Every account — GitHub, Cloudflare, Resend, Google Drive backup folder, domain
 | Hosting | Cloudflare Pages | Free, commercial use allowed, Mumbai/Chennai edge nodes, Foundation-friendly |
 | Runtime | Cloudflare Workers (edge) | Fast globally, must use edge-compatible libraries only |
 | Database | Cloudflare D1 (SQLite) | Free tier 5GB, serverless, automatic replication |
-| File storage | Cloudflare R2 | Free tier 10GB, for PDF/Excel exports |
+| File exports | Google Drive API | PDF/Excel exports uploaded directly; no R2 needed |
 | Styling | Tailwind CSS + shadcn/ui | Utility-first, accessible primitives, easy to maintain |
 | Forms | react-hook-form + zod | Type-safe validation, great DX |
 | Charts | Recharts | Simple, React-native, good defaults |
@@ -123,9 +123,7 @@ binding = "DB"
 database_name = "gsf-accounts-db"
 database_id = "REPLACE_WITH_ACTUAL_ID"
 
-[[r2_buckets]]
-binding = "STORAGE"
-bucket_name = "gsf-accounts-files"
+# File exports and backups go to Google Drive — R2 is not used.
 ```
 
 Commit this file. It contains no secrets.
@@ -926,7 +924,7 @@ _JazakAllah Khair_
 
 ### 11.3 Forward-compatibility (for future stack migration)
 
-- **Keep Cloudflare-specific code at the edges.** Anything that touches `env.DB` or `env.STORAGE` lives in `lib/db.ts` or `lib/storage.ts` — not scattered across route handlers.
+- **Keep Cloudflare-specific code at the edges.** Anything that touches `env.DB` lives in `lib/db.ts` — not scattered across route handlers. Google Drive access is isolated to `lib/drive.ts`.
 - **Queries are plain SQL.** A future dev migrating to Postgres rewrites the connection layer, not every query.
 - **Business logic in pure functions.** `calculateRunningBalance(entries)` is testable without a database.
 - **No Cloudflare imports in UI components.** Ever.
@@ -1006,7 +1004,7 @@ Write it as you build, not at the end. It should contain:
 - [ ] Create `wrangler.toml`
 - [ ] Run `wrangler d1 create gsf-accounts-db`
 - [ ] Update `wrangler.toml` with the database ID
-- [ ] Run `wrangler r2 bucket create gsf-accounts-files`
+- [ ] ~~Run `wrangler r2 bucket create gsf-accounts-files`~~ — R2 not used; Google Drive handles file storage
 
 **0.3 Env vars & secrets**
 - [ ] Generate JWT_SECRET (64 random bytes hex)
@@ -1031,7 +1029,7 @@ Write it as you build, not at the end. It should contain:
 - [ ] Production URL loads without errors
 - [ ] Dev preview URL loads and differs (e.g. console.log confirms)
 - [ ] D1 database exists and is bound
-- [ ] R2 bucket exists and is bound
+- [ ] ~~R2 bucket~~ — not used; Google Drive is the file storage layer
 - [ ] No errors in Cloudflare build log
 - [ ] No TypeScript errors locally
 - [ ] `.gitignore` excludes `.env.local`, `.vercel/`, `node_modules/`
@@ -1398,7 +1396,7 @@ Write it as you build, not at the end. It should contain:
 
 ### PHASE 8 — Reports & Exports (3–4 days)
 
-**Goal:** Annual report + custom range exports, Excel + PDF, stored in R2, signed download links.
+**Goal:** Annual report + custom range exports, Excel + PDF, uploaded to Google Drive with a direct download link returned to the user.
 
 **Sub-phases:**
 
@@ -1407,12 +1405,13 @@ Write it as you build, not at the end. It should contain:
 
 **8.2 Excel export (`xlsx` lib)**
 - [ ] Multi-sheet: Summary, General, Zakat, Subscriptions, Medical, Scholarship
-- [ ] Save to R2 with timestamped name
-- [ ] Generate signed URL (expires 1 hour)
+- [ ] Upload to Foundation's Google Drive folder via `lib/drive.ts`
+- [ ] Return a direct Google Drive download link (no signed URL needed — Drive handles access)
 
 **8.3 PDF export (`@react-pdf/renderer`)**
 - [ ] Clean branded layout
 - [ ] Same data as Excel but formatted
+- [ ] Also uploaded to Google Drive
 
 **8.4 UI**
 - [ ] Reports page: pick report type + date range → generate → download link
@@ -1425,9 +1424,9 @@ Write it as you build, not at the end. It should contain:
 **8.6 Review gate**
 - [ ] Annual report Excel has correct totals matching reconciliation
 - [ ] PDF formats correctly (spot check layout)
-- [ ] Files land in R2
-- [ ] Signed URL works and expires
-- [ ] Commit: `feat: annual report excel+pdf exports, r2 storage, signed urls`
+- [ ] Files appear in Foundation's Google Drive folder
+- [ ] Download link opens the file correctly
+- [ ] Commit: `feat: annual report excel+pdf exports, google drive storage`
 
 ---
 

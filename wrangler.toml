@@ -7,8 +7,7 @@ pages_build_output_dir = ".vercel/output/static"
 [[d1_databases]]
 binding = "DB"
 database_name = "gsf-accounts-db"
-database_id = "REPLACE_WITH_ACTUAL_ID"
+database_id = "f8bf6798-a34b-4e2f-b1fe-4a1b1ee0cea7"
 
-[[r2_buckets]]
-binding = "STORAGE"
-bucket_name = "gsf-accounts-files"
+# File exports (PDF/Excel) and backups are stored in Google Drive.
+# R2 is not used in this project.
