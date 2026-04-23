@@ -23,6 +23,9 @@
 # cloudflare / opennext build output
 /.open-next
 
+# wrangler local dev state (local D1 db, KV, R2 — never commit)
+/.wrangler
+
 # misc
 .DS_Store
 *.pem

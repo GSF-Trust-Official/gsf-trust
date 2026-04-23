@@ -132,6 +132,37 @@ export interface Setting {
   updated_by: string | null;
 }
 
+export interface RegistrationRequest {
+  id: string;
+  name: string;
+  email: string;
+  phone: string | null;
+  member_code: string | null;
+  message: string | null;
+  status: "pending" | "approved" | "rejected";
+  reviewed_by: string | null;
+  reviewed_at: string | null;
+  linked_member_id: string | null;
+  rejection_reason: string | null;
+  created_at: string;
+}
+
+export interface ScholarshipAnnouncement {
+  id: string;
+  title: string;
+  description: string;
+  eligibility_criteria: string | null;
+  deadline: string | null;
+  contact: string | null;
+  poster_drive_url: string | null;
+  documents_drive_url: string | null;
+  form_url: string | null;
+  is_active: 0 | 1;
+  posted_by: string | null;
+  created_at: string;
+  updated_at: string;
+}
+
 // JWT payload shape
 export interface JwtPayload {
   sub: string;

@@ -25,15 +25,26 @@ The Foundation currently manages ~₹4,57,900 across two accounts (General and Z
 
 **Permission matrix:**
 
-| Action | admin | editor | viewer | member |
-|--------|-------|--------|--------|--------|
-| View full Foundation data | ✅ | ✅ | ✅ | ❌ |
-| View own data only | ✅ | ✅ | ✅ | ✅ |
+| Capability | admin | editor | viewer | member |
+|-----------|-------|--------|--------|--------|
 | Log transactions (subs, donations, expenses) | ✅ | ✅ | ❌ | ❌ |
-| Create/edit members | ✅ | ✅ | ❌ | ❌ |
-| Soft-delete records | ✅ | ❌ | ❌ | ❌ |
+| Edit transactions | ✅ | ✅ | ❌ | ❌ |
+| Delete transactions (soft) | ✅ | ❌ | ❌ | ❌ |
+| View all ledgers | ✅ | ✅ | ✅ | ❌ |
+| View own payment history | ✅ | ✅ | ✅ | ✅ |
+| Download own receipts (PDF) | ✅ | ✅ | ✅ | ✅ |
+| Manage members (create/edit) | ✅ | ✅ | ❌ | ❌ |
+| View members list | ✅ | ✅ | ✅ | ❌ |
+| View own profile | ✅ | ✅ | ✅ | ✅ |
+| Edit own profile (phone/email) | ✅ | ✅ | ✅ | ✅ |
+| Post scholarship announcement | ✅ | ✅ | ❌ | ❌ |
+| View scholarship announcement page | ✅ | ✅ | ✅ | ✅ |
+| View payments page (banking + QR) | ✅ | ✅ | ✅ | ✅ |
+| Approve registration requests | ✅ | ❌ | ❌ | ❌ |
 | Manage users (invite, change roles) | ✅ | ❌ | ❌ | ❌ |
 | Settings & backup | ✅ | ❌ | ❌ | ❌ |
+| Export reports | ✅ | ✅ | ✅ | own data only |
+| View audit log | ✅ | ✅ | ✅ | ❌ |
 
 The `member` role is in the V1 schema and the self-service portal UI is built in V1 (Phase 13). Every member-facing route enforces row-level security — a member can only ever see their own data.
 
@@ -74,6 +85,7 @@ Every account — GitHub, Cloudflare, Resend, Google Drive backup folder, domain
 | Utilities | clsx, tailwind-merge, lodash (sparingly) | Only where they add value |
 | Excel export | `xlsx` (SheetJS) | Robust multi-sheet support |
 | PDF export | `@react-pdf/renderer` | Works in edge runtime, simpler than puppeteer |
+| QR code generation | `qrcode` | Pure-JS UPI QR generation; no external service, runs on Workers edge |
 | Monitoring | UptimeRobot (free) | External ping every 5 min |
 
 ### 1.2 What NOT to use
@@ -256,19 +268,21 @@ One logical change per commit. Commit often.
 
 ## 4. SCOPE — WHAT V1 INCLUDES
 
-11 core modules, all functional end-to-end on mobile and desktop.
+13 core modules, all functional end-to-end on mobile and desktop.
 
-1. **Authentication** — Email + password, JWT in httpOnly cookie, optional 2FA for treasurer, forgot password
+1. **Authentication** — Email + password, JWT in httpOnly cookie, optional 2FA for treasurer, forgot password, self-registration form with Treasurer approval workflow
 2. **Dashboard** — KPI tiles (Total Funds, General, Zakat, Medical Pool, Outstanding Dues), Recharts (donation breakdown, expense allocation, collection rate), quick action buttons
 3. **Members Roster** — CRUD, search, filter (Active/Inactive/BOD), per-member profile with contribution history
 4. **Subscription Tracker** — P/D/N/A matrix, year selector, clickable cells, bulk mark-as-paid, arrears view
-5. **General Ledger** — chronological, filters (date/category/member/in-out), running balance, export
-6. **Zakat Ledger** — completely separate, restricted badge, scholarship-only outflows
+5. **General Ledger** — chronological, filters (date/category/member/in-out), running balance via window function, export; admin and editor can edit entries, admin can soft-delete
+6. **Zakat Ledger** — completely separate, restricted badge, scholarship-only outflows; same edit/delete rules as General Ledger
 7. **Donations Tracker** — Hadiya/Zakat/Other, auto-routed to correct account
 8. **Medical Assistance Log** — cases with beneficiary (maskable), amounts, pledges, status
 9. **Scholarship Log** — payouts, academic year, eligibility notes, Zakat-sourced
 10. **Reports & Exports** — Annual report (Excel + PDF), Usage Breakdown, custom date-range exports
-11. **Member Self-Service Portal** — Members log in with the `member` role and see only their own subscription history, donation history, outstanding dues, and personal details; strict row-level security on every route
+11. **Member Self-Service Portal** — Members log in and see only their own subscription history, donation history, outstanding dues, personal details, and downloadable PDF receipts; strict row-level security on every route
+12. **Payments Page** — visible to all roles; displays Foundation's banking details (stored in Settings) and a dynamically generated UPI QR code via `qrcode` package
+13. **Scholarship Announcements** — Treasurer/editor posts structured announcement (title, description, deadline, Google Drive poster link, Google Forms application link); all roles can view and access the form
 
 ---
 
@@ -575,6 +589,63 @@ CREATE INDEX IF NOT EXISTS idx_audit_entity ON audit_log(entity, entity_id);
 CREATE INDEX IF NOT EXISTS idx_audit_user_date ON audit_log(user_id, created_at DESC);
 ```
 
+**Additional tables added via later migrations:**
+
+```sql
+-- 004_add_member_user_link.sql
+-- Links a users row to a members row (nullable; only set for role='member')
+ALTER TABLE users ADD COLUMN member_id TEXT REFERENCES members(id);
+
+-- 005_registration_requests.sql
+-- Self-registration requests pending Treasurer approval
+CREATE TABLE IF NOT EXISTS registration_requests (
+  id TEXT PRIMARY KEY DEFAULT (lower(hex(randomblob(16)))),
+  name TEXT NOT NULL,
+  email TEXT NOT NULL,
+  phone TEXT,
+  member_code TEXT,
+  message TEXT,
+  status TEXT NOT NULL DEFAULT 'pending'
+    CHECK (status IN ('pending','approved','rejected')),
+  reviewed_by TEXT REFERENCES users(id),
+  reviewed_at TEXT,
+  linked_member_id TEXT REFERENCES members(id),
+  rejection_reason TEXT,
+  created_at TEXT DEFAULT (datetime('now'))
+);
+CREATE INDEX IF NOT EXISTS idx_reg_requests_status ON registration_requests(status);
+
+-- 006_scholarship_announcements.sql
+-- Bulletin board for scholarship announcements (separate from scholarship_payouts)
+CREATE TABLE IF NOT EXISTS scholarship_announcements (
+  id TEXT PRIMARY KEY DEFAULT (lower(hex(randomblob(16)))),
+  title TEXT NOT NULL,
+  description TEXT NOT NULL,
+  eligibility_criteria TEXT,
+  deadline TEXT,
+  contact TEXT,
+  poster_drive_url TEXT,       -- Google Drive share link (poster/flyer)
+  documents_drive_url TEXT,    -- Google Drive share link (optional extra docs)
+  form_url TEXT,               -- Google Forms link
+  is_active INTEGER NOT NULL DEFAULT 0,  -- only one active at a time
+  posted_by TEXT REFERENCES users(id),
+  created_at TEXT DEFAULT (datetime('now')),
+  updated_at TEXT DEFAULT (datetime('now'))
+);
+```
+
+**Settings keys for banking / payments page** (rows in the existing `settings` table, no new table needed):
+
+| Key | Description |
+|-----|-------------|
+| `bank_name` | Name of the bank |
+| `account_name` | Account holder name |
+| `account_number` | Account number (display masked in UI) |
+| `ifsc_code` | IFSC code |
+| `branch` | Branch name |
+| `upi_id` | UPI ID (e.g. `gsffoundation@okaxis`) |
+| `gpay_number` | Phone number linked to GPay |
+
 ### 6.3 Schema design principles (for future migrations / stack migration)
 
 - **Prefer SQL-standard types.** Even though D1 is SQLite, write SQL that would migrate to Postgres with minimal changes. Avoid SQLite-specific tricks where a standard form exists.
@@ -583,6 +654,19 @@ CREATE INDEX IF NOT EXISTS idx_audit_user_date ON audit_log(user_id, created_at 
 - **IDs are opaque strings.** Don't expose sequential integers. Current: 16-byte random hex. Could swap to UUIDs later without breaking code that treats them as strings.
 - **Monetary values as REAL for now.** If stack migrates to Postgres, change to `NUMERIC(12,2)`. Don't use floats for intermediate calculations — always round to 2dp before comparing.
 - **No ORM-specific types.** Anyone reading the schema should understand it without Prisma/Drizzle knowledge.
+- **Running balance is computed, not stored.** The `running_balance` column exists in `ledger_entries` but is not written to — it is left `NULL`. Running balance is always derived at query time using a window function so edits and soft-deletes never leave stale cached values:
+  ```sql
+  SELECT *,
+    SUM(amount) OVER (
+      PARTITION BY account
+      ORDER BY date, created_at
+      ROWS UNBOUNDED PRECEDING
+    ) AS running_balance
+  FROM ledger_entries
+  WHERE is_deleted = 0
+  ORDER BY date DESC, created_at DESC;
+  ```
+  D1 (SQLite) supports window functions. This is more reliable than maintaining a stored column at ~hundreds of entries.
 
 ### 6.4 Writing queries
 
@@ -1093,7 +1177,7 @@ Write it as you build, not at the end. It should contain:
 - [x] D1 database exists and is bound (confirmed in deploy log)
 - [x] Build completes without errors
 - [x] TypeScript passes clean locally
-- [x] `.gitignore` excludes `.env.local`, `.open-next/`, `node_modules/`
+- [x] `.gitignore` excludes `.env.local`, `.open-next/`, `.wrangler/`, `node_modules/`
 
 ---
 
@@ -1359,31 +1443,38 @@ PRAGMA foreign_keys = ON;
 
 ---
 
-### PHASE 5 — Ledgers & Log Expense (3–4 days)
+### PHASE 5 — Ledgers & Log Expense (4–5 days)
 
-**Goal:** General Ledger, Zakat Ledger, Log Expense modal. Zakat isolation enforced.
+**Goal:** General Ledger, Zakat Ledger, Log Expense modal. Zakat isolation enforced. Admin and editor can edit entries; admin can soft-delete. Running balance computed via window function.
 
 **Sub-phases:**
 
 **5.1 Queries**
-- [ ] `lib/queries/ledger.ts` — `getLedger({ account, filters, page })`, `getRunningBalance()`, `insertExpense(...)`
+- [ ] `lib/queries/ledger.ts` — `getLedger({ account, filters, page })`, `insertExpense(...)`, `updateEntry(...)`, `softDeleteEntry(...)`
+- [ ] Running balance computed via window function in every ledger query — never read from the `running_balance` column (see §6.3)
 
 **5.2 API**
 - [ ] `GET /api/ledger?account=general&...` — paginated, filtered
 - [ ] `POST /api/ledger/expense` — atomic write + audit
+- [ ] `PATCH /api/ledger/[id]` — edit entry; admin and editor only; can change amount, date, description, category, reference, notes; **cannot** change account (General ↔ Zakat); audit logs before/after JSON
+- [ ] `DELETE /api/ledger/[id]` — soft delete; admin only; sets `is_deleted=1`, `deleted_at`, `deleted_by`; audit logs the delete
 - [ ] Server-side check: if account=zakat, category must be 'Scholarship'
 
 **5.3 UI — General Ledger**
 - [ ] `app/(app)/ledger/page.tsx`
 - [ ] Columns: Date, Category/Sub, Member Code, Description, Amount (colored), Running Balance
+- [ ] Running balance column is always computed server-side — never from a stored column
 - [ ] Filters: date range picker, category select, member code input, in/out toggle
 - [ ] Current balance KPI top-right
 - [ ] Server-side pagination (20/page)
 - [ ] Export PDF / Excel buttons (toast "coming soon" until Phase 8)
+- [ ] Pencil icon on each row → Edit modal (admin and editor)
+- [ ] Trash icon on each row → Delete confirmation dialog (admin only)
+- [ ] Deleted entries hidden from normal view; visible in Audit Log
 
 **5.4 UI — Zakat Ledger**
 - [ ] `app/(app)/zakat/page.tsx`
-- [ ] Same layout, filtered to account='zakat'
+- [ ] Same layout including edit/delete controls, filtered to account='zakat'
 - [ ] Red "Restricted Account" badge top
 - [ ] Balance displayed separately, never merged
 - [ ] Filter tabs: All / Inflows / Payouts
@@ -1394,20 +1485,38 @@ PRAGMA foreign_keys = ON;
 - [ ] Client shows amount as positive; stored as negative in DB
 - [ ] Submit: batch write
 
-**5.6 Mobile pass**
+**5.6 UI — Edit Entry modal**
+- [ ] Pre-fills all editable fields from the selected row
+- [ ] Account field is read-only (no moving entries between accounts)
+- [ ] On submit: PATCH request + audit entry with `before_json` and `after_json`
+- [ ] Success: close modal, refresh ledger rows, toast
+
+**5.7 UI — Delete confirmation**
+- [ ] Dialog text: "This will remove this entry from all balances. The audit log will retain a permanent record. Are you sure?"
+- [ ] Shows the entry details (date, description, amount) in the confirmation
+- [ ] On confirm: DELETE request + soft-delete; row disappears from ledger view
+
+**5.8 Mobile pass**
 - [ ] Ledger tables → stacked cards on mobile
+- [ ] Edit and delete actions accessible in card view (kebab menu or swipe action)
 - [ ] Filters collapse into a bottom sheet on mobile
 - [ ] Modal full-screen on mobile
 
-**5.7 Review gate**
+**5.9 Review gate**
 - [ ] General ledger shows all general entries, never zakat
 - [ ] Zakat ledger shows only zakat entries
 - [ ] Log Expense with Zakat + Medical is rejected by the API (even if UI somehow bypassed)
-- [ ] Running balance calculation is correct (spot check 3 entries manually)
+- [ ] Running balance is correct after an edit (spot check: edit an entry and verify all subsequent balances update)
+- [ ] Running balance is correct after a soft delete
+- [ ] Edit saves before/after state in audit_log — verify both fields are populated
+- [ ] Delete saves `deleted_by`, `deleted_at`, and `before_json` in audit_log
+- [ ] Editor cannot call DELETE — returns 403
+- [ ] Editor PATCH succeeds; amount/date/description changes persist
+- [ ] Editing an entry cannot change its account (General or Zakat) — enforce server-side
 - [ ] Filters combine correctly (date + category + member)
 - [ ] Pagination works
 - [ ] **Isolation test:** run the Zakat isolation SQL from §8.5 — must return 0
-- [ ] Commit: `feat: general ledger, zakat ledger, log expense with restriction`
+- [ ] Commit: `feat: general ledger, zakat ledger, log expense, edit and soft-delete`
 
 ---
 
@@ -1445,9 +1554,9 @@ PRAGMA foreign_keys = ON;
 
 ---
 
-### PHASE 7 — Medical & Scholarship (3–4 days)
+### PHASE 7 — Medical & Scholarship (4–5 days)
 
-**Goal:** Medical cases CRUD with privacy masking; scholarship payouts deduct from Zakat.
+**Goal:** Medical cases CRUD with privacy masking; scholarship payouts deduct from Zakat; scholarship announcement board for members to view and apply.
 
 **Sub-phases:**
 
@@ -1458,7 +1567,7 @@ PRAGMA foreign_keys = ON;
 - [ ] Mark pledge received (updates amount_external)
 - [ ] Close case action
 
-**7.2 Scholarship queries + API + UI**
+**7.2 Scholarship payout queries + API + UI**
 - [ ] Payout list
 - [ ] Log Scholarship Payout modal — writes to Zakat ledger (negative amount)
 - [ ] Eligibility notes field
@@ -1468,16 +1577,57 @@ PRAGMA foreign_keys = ON;
 - [ ] Admin sees real names
 - [ ] Export respects masking preference
 
-**7.4 Mobile pass**
+**7.4 Migration + Scholarship announcement queries + API**
+- [ ] Apply `006_scholarship_announcements.sql` locally and remotely
+- [ ] `lib/queries/scholarshipAnnouncements.ts` — `getActiveAnnouncement()`, `upsertAnnouncement(...)`, `listAnnouncements()`
+- [ ] `GET /api/scholarship/announcement` — returns the currently active announcement (all roles)
+- [ ] `POST /api/scholarship/announcement` — create/update announcement; admin and editor only
+- [ ] `PATCH /api/scholarship/announcement/[id]/activate` — sets this row active, deactivates all others; admin and editor only
+- [ ] Validate `form_url` starts with `https://docs.google.com/forms/` server-side
+- [ ] When poster drive URL is saved, do a server-side HEAD fetch — if it returns a non-200 (Drive login redirect), respond with a warning `{ ok: true, warning: 'poster_url_may_require_signin' }` so the UI can show a tip
+
+**7.5 UI — Scholarship announcement (all roles)**
+- [ ] `app/(app)/scholarship/announcement/page.tsx`
+- [ ] Fetch active announcement from D1
+- [ ] Display: title, description, eligibility, deadline, contact
+- [ ] Poster: convert Google Drive share URL to preview URL for iframe embed; fallback "View Poster →" link in case iframe fails
+  ```ts
+  // lib/utils.ts helpers
+  export const getDrivePreviewUrl = (shareUrl: string) => {
+    const match = shareUrl.match(/\/d\/([a-zA-Z0-9_-]+)/);
+    return match ? `https://drive.google.com/file/d/${match[1]}/preview` : shareUrl;
+  };
+  export const getDriveThumbnailUrl = (shareUrl: string) => {
+    const match = shareUrl.match(/\/d\/([a-zA-Z0-9_-]+)/);
+    return match ? `https://drive.google.com/thumbnail?id=${match[1]}&sz=w800` : shareUrl;
+  };
+  ```
+- [ ] "Apply Now →" button — `<a href={formUrl} target="_blank">`; only shown if `form_url` is set
+- [ ] "Supporting Documents →" link — only shown if `documents_drive_url` is set
+- [ ] Empty state if no active announcement: "No scholarship announcements at this time."
+
+**7.6 UI — Manage Announcement (admin and editor)**
+- [ ] "Manage Announcement" button visible to admin/editor, hidden from viewer/member
+- [ ] Form fields: Title, Description (textarea), Eligibility Criteria (textarea), Deadline (date picker), Contact (email), Poster Drive Link, Supporting Docs Link (optional), Application Form Link, Status (Draft / Published)
+- [ ] If poster link returns the drive-signin-required warning: show inline tip "Make sure sharing is set to 'Anyone with the link' in Google Drive."
+- [ ] Preview button — shows the member view before publishing
+
+**7.7 Mobile pass**
 - [ ] Case detail readable at 360px
+- [ ] Announcement readable at 360px — poster iframe responsive
+- [ ] "Apply Now" button prominent and tap-friendly
 - [ ] Modals full-screen
 
-**7.5 Review gate**
+**7.8 Review gate**
 - [ ] Medical CRUD end-to-end
 - [ ] Scholarship payout deducts from Zakat balance
 - [ ] Masking works for viewers
-- [ ] Audit log captures everything
-- [ ] Commit: `feat: medical cases, scholarship log, privacy masking`
+- [ ] Active announcement is visible to all roles (including members)
+- [ ] Viewer and member cannot POST/PATCH the announcement — returns 403
+- [ ] Only one announcement active at a time (verify in DB: `SELECT COUNT(*) FROM scholarship_announcements WHERE is_active=1` = 1)
+- [ ] Google Forms link validation rejects non-Forms URLs
+- [ ] Audit log captures all creates/updates
+- [ ] Commit: `feat: medical cases, scholarship log, scholarship announcement board`
 
 ---
 
@@ -1657,57 +1807,110 @@ PRAGMA foreign_keys = ON;
 
 ---
 
-### PHASE 13 — Member Self-Service Portal (3–4 days)
+### PHASE 13 — Member Self-Service Portal (6–8 days)
 
-**Goal:** Foundation members can log in with the `member` role and view only their own data. No write access, strict row-level security.
+**Goal:** Foundation members can self-register, get Treasurer approval, log in, and view their own data with downloadable PDF receipts. Payments page with UPI QR visible to all roles. Self-registration flow with pending queue in Settings.
 
 **Sub-phases:**
 
-**13.1 API routes (member-scoped)**
+**13.1 Migrations**
+- [ ] Apply `004_add_member_user_link.sql` — adds `member_id TEXT REFERENCES members(id)` to users (nullable)
+- [ ] Apply `005_registration_requests.sql` — self-registration table (see §6.2)
+- [ ] Apply both locally and remotely
+
+**13.2 API routes (member-scoped)**
 - [ ] `GET /api/me/subscriptions` — member's own subscription history (all years)
 - [ ] `GET /api/me/donations` — member's own donation history
 - [ ] `GET /api/me/dues` — outstanding months where status='due'
 - [ ] `PATCH /api/me/profile` — update own phone and email only
-- [ ] Every query binds `WHERE member_id = [authed user's linked member id]`
-- [ ] A `member_id` column links a `users` row to a `members` row — add to users table via migration `004_add_member_user_link.sql`
+- [ ] `GET /api/me/receipts/[subscriptionId]` — generates and streams a PDF receipt using `@react-pdf/renderer`; enforces `subscription.member_id === authed user's member_id`
+- [ ] Every query binds `WHERE member_id = ?` to the authed user's linked `member_id`
 
-**13.2 Migration: link users to members**
-- [ ] `cloudflare/migrations/004_add_member_user_link.sql` — adds `member_id TEXT REFERENCES members(id)` to the users table (nullable; only set for role='member')
-- [ ] Apply locally and remotely
+**13.3 Self-registration API**
+- [ ] `POST /api/auth/register` — public (no auth); creates a `registration_requests` row with `status='pending'`; sends email to Treasurer via Resend: "New registration request from [Name]"
+- [ ] `GET /api/admin/registrations` — admin only; lists pending requests
+- [ ] `POST /api/admin/registrations/[id]/approve` — admin only; creates `users` row (`role='member'`, `must_change_password=1`, `member_id` linked to selected member); sends invite email with one-time JWT link (48h expiry); sets request `status='approved'`
+- [ ] `POST /api/admin/registrations/[id]/reject` — admin only; sends polite rejection email; sets `status='rejected'`, stores `rejection_reason`
+- [ ] `POST /api/admin/bulk-invite` — admin only; send direct invite emails to all members who have an email on record but no user account yet (pre-approved path, no pending queue)
 
-**13.3 Invite flow (admin only)**
-- [ ] Admin can invite a member from the member profile page: enter email → creates a `users` row with `role='member'`, `must_change_password=1`, `member_id` linked, sends invite email via Resend
-- [ ] `POST /api/admin/invite-member` — admin-only
-- [ ] Invite email contains a one-time password reset link
+**13.4 Admin invite flow (direct invite from member profile)**
+- [ ] Admin can invite a specific member from the member profile page: triggers `POST /api/admin/invite-member` → same result as approve (creates user, sends invite, links member_id)
+- [ ] Invite email contains a one-time link: signed JWT (`{ sub: userId, purpose: 'set-password', exp: 48h }`), links to `/set-password?token=...`
+- [ ] `POST /api/auth/set-password` — validates token, sets password, clears `must_change_password`
 
-**13.4 UI — member dashboard (`/me`)**
-- [ ] Separate layout for member role — simpler, no sidebar nav to Foundation data
-- [ ] Landing page: outstanding dues (prominent), total contributed, quick stats
-- [ ] Subscription history: year tabs, P/D/N/A cells (read-only, same chip design)
+**13.5 UI — Registration form (public)**
+- [ ] "Register" link on the login page → `app/(auth)/register/page.tsx`
+- [ ] Fields: Full name, Email, Phone (optional), Member code (optional, hint: "If you know your code from a physical card"), Message to Treasurer (optional)
+- [ ] On submit: POST to `/api/auth/register`; show: "Your registration request has been submitted. The Treasurer will review it and you'll receive an email when your account is ready."
+
+**13.6 UI — Pending registrations (admin, in Settings)**
+- [ ] Settings → "Pending Registrations" with badge count
+- [ ] List of requests: name, email, phone, date submitted, message
+- [ ] Approve action: dropdown to select existing member to link (or "Create new member"), then confirm
+- [ ] Reject action: optional rejection reason field
+- [ ] Approved/rejected history also visible (status filter)
+
+**13.7 UI — Member dashboard (`/me`)**
+- [ ] Separate layout for `member` role — simpler, no sidebar nav to Foundation-wide pages
+- [ ] Landing: outstanding dues (prominent), total contributed this year, quick stats
+- [ ] Subscription history: year tabs, P/D/N/A chip grid (read-only); each paid row has a "Download Receipt" button
 - [ ] Donation history: date, type, amount, mode
 - [ ] Personal details: name (read-only), email and phone (editable)
-- [ ] No access to `/dashboard`, `/ledger`, `/members`, or any other Foundation-wide page — redirect to `/me` if a member role tries to access those
+- [ ] Link to Payments page and Scholarship Announcement page in nav
+- [ ] Middleware redirects `member` role away from all non-`/me` app routes
 
-**13.5 Row-level security enforcement**
-- [ ] Every `/api/me/*` route calls `isMember(user.role)` — returns 403 to non-members
-- [ ] Every query uses `WHERE member_id = ?` bound to the authed user's `member_id`
-- [ ] No route in `/api/me/*` ever returns data for a different `member_id`
-- [ ] Middleware redirects `member` role away from non-`/me` app routes
+**13.8 UI — Receipt download (PDF)**
+- [ ] "Download Receipt" button on each paid subscription row in the member dashboard
+- [ ] Calls `GET /api/me/receipts/[subscriptionId]`
+- [ ] PDF generated server-side using `@react-pdf/renderer`:
+  - Header: "GSF Foundation — PAYMENT RECEIPT"
+  - Receipt No: `RCP-YYYY-MM-[memberCode]` (constructed from subscription data)
+  - Member name, code, payment for (month/year), amount, mode, reference, date of payment, status "PAID ✓"
+  - Footer: "System-generated receipt · GSF Foundation"
+- [ ] Response: `Content-Type: application/pdf`, `Content-Disposition: attachment; filename="receipt-YYYY-MM.pdf"`
+- [ ] All roles (admin, editor, viewer) can also download receipts from the Treasurer-facing subscription view
 
-**13.6 Mobile pass**
-- [ ] `/me` dashboard usable at 360px — members will primarily use phones
-- [ ] Subscription grid scrolls horizontally with sticky labels
-- [ ] Personal details form accessible with single column on mobile
+**13.9 UI — Payments page (`/payments`, all roles)**
+- [ ] `app/(app)/payments/page.tsx` — visible to all authenticated roles
+- [ ] Fetches banking details from `settings` table (keys: `bank_name`, `account_name`, `account_number`, `ifsc_code`, `branch`, `upi_id`, `gpay_number`)
+- [ ] Displays account number masked: show only last 4 digits (`XXXXXXXX4521`)
+- [ ] Generates UPI QR code dynamically:
+  ```ts
+  import QRCode from 'qrcode';
+  const upiUrl = `upi://pay?pa=${upiId}&pn=GSF+Foundation&cu=INR`;
+  const qrDataUrl = await QRCode.toDataURL(upiUrl);
+  // <img src={qrDataUrl} alt="Scan to pay" />
+  ```
+- [ ] Note displayed below QR: "Amount is not pre-filled — enter the amount yourself and send a screenshot to the Treasurer via WhatsApp after paying."
+- [ ] Admin can edit banking details from this page (or from Settings)
+- [ ] Link to payments page in `/me` nav for members; in sidebar for other roles
 
-**13.7 Review gate**
-- [ ] Member can log in, sees only their own data
-- [ ] Member cannot access `/dashboard`, `/ledger`, or any `/members` route
-- [ ] A crafted API request to `/api/me/subscriptions` with a different `member_id` returns no data (not 403 — just empty)
-- [ ] Admin invite flow creates user, sends email, member can set password and log in
-- [ ] Profile update (phone/email) persists and logs to audit_log
+**13.10 Row-level security**
+- [ ] Every `/api/me/*` route checks `isMember(user.role)` — 403 for non-members
+- [ ] Every query binds `WHERE member_id = ?` to the authed user's `member_id`
+- [ ] A crafted API request supplying a different `member_id` returns empty results (not an error — just empty)
+
+**13.11 Mobile pass**
+- [ ] Registration form usable at 360px
+- [ ] `/me` dashboard usable at 360px — members primarily on phones
+- [ ] Subscription grid scrolls horizontally with sticky month labels
+- [ ] QR code large enough to scan on a phone screen (≥ 200×200px)
+- [ ] PDF download works on mobile Safari (use `Content-Disposition: attachment`)
+- [ ] Personal details form single column on mobile
+
+**13.12 Review gate**
+- [ ] Member self-registers → Treasurer receives email → approves and links to member record → member receives invite → sets password → logs in → sees own data
+- [ ] Bulk invite sends emails to all eligible members
+- [ ] Member cannot access `/dashboard`, `/ledger`, `/members`, or any Foundation-wide route
+- [ ] Receipt PDF downloads correctly: name, code, month/year, amount, mode, reference, date
+- [ ] Receipt endpoint rejects requests where `subscription.member_id !== authed user's member_id`
+- [ ] Payments page shows correct banking details; QR code scans correctly in GPay/Paytm
+- [ ] Account number is masked in display
+- [ ] Registration with an email already in `registration_requests` or `users` is rejected (duplicate check)
+- [ ] Profile update (phone/email) logs to audit_log
 - [ ] No TypeScript errors
-- [ ] Mobile: every action works at 360px
-- [ ] Commit: `feat: member self-service portal with row-level security`
+- [ ] Mobile: all actions work at 360px
+- [ ] Commit: `feat: member portal, receipt download, payments page, self-registration`
 
 ---
 
