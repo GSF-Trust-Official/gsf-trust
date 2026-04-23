@@ -1177,7 +1177,7 @@ Write it as you build, not at the end. It should contain:
 - [x] D1 database exists and is bound (confirmed in deploy log)
 - [x] Build completes without errors
 - [x] TypeScript passes clean locally
-- [x] `.gitignore` excludes `.env.local`, `.open-next/`, `node_modules/`
+- [x] `.gitignore` excludes `.env.local`, `.open-next/`, `.wrangler/`, `node_modules/`
 
 ---
 
