@@ -21,7 +21,7 @@ The Foundation currently manages ~₹4,57,900 across two accounts (General and Z
 | Treasurer | `admin` | 1 | Full read/write + user management + soft-delete |
 | Board Member (write) | `editor` | 0–12 | Log transactions, edit members — cannot delete or manage users |
 | Board Member (read-only) | `viewer` | 0–12 | View all Foundation data, audit-ready, no write access |
-| Foundation Member | `member` | up to ~50 | See only their own data (subs, donations, dues) — V2 UI, schema ready in V1 |
+| Foundation Member | `member` | up to ~50 | See only their own data (subs, donations, dues) — self-service portal built in V1 |
 
 **Permission matrix:**
 
@@ -35,7 +35,7 @@ The Foundation currently manages ~₹4,57,900 across two accounts (General and Z
 | Manage users (invite, change roles) | ✅ | ❌ | ❌ | ❌ |
 | Settings & backup | ✅ | ❌ | ❌ | ❌ |
 
-The `member` role is in the schema from day one (V1) so existing auth and JWT infrastructure works. The member-facing **UI** (self-service portal) is built in V2 — see §13.
+The `member` role is in the V1 schema and the self-service portal UI is built in V1 (Phase 13). Every member-facing route enforces row-level security — a member can only ever see their own data.
 
 ### 0.3 Non-negotiable principles
 
@@ -256,7 +256,7 @@ One logical change per commit. Commit often.
 
 ## 4. SCOPE — WHAT V1 INCLUDES
 
-10 core modules, all functional end-to-end on mobile and desktop.
+11 core modules, all functional end-to-end on mobile and desktop.
 
 1. **Authentication** — Email + password, JWT in httpOnly cookie, optional 2FA for treasurer, forgot password
 2. **Dashboard** — KPI tiles (Total Funds, General, Zakat, Medical Pool, Outstanding Dues), Recharts (donation breakdown, expense allocation, collection rate), quick action buttons
@@ -268,6 +268,7 @@ One logical change per commit. Commit often.
 8. **Medical Assistance Log** — cases with beneficiary (maskable), amounts, pledges, status
 9. **Scholarship Log** — payouts, academic year, eligibility notes, Zakat-sourced
 10. **Reports & Exports** — Annual report (Excel + PDF), Usage Breakdown, custom date-range exports
+11. **Member Self-Service Portal** — Members log in with the `member` role and see only their own subscription history, donation history, outstanding dues, and personal details; strict row-level security on every route
 
 ---
 
@@ -1644,7 +1645,7 @@ PRAGMA foreign_keys = ON;
 
 **12.2 Deliverables**
 - [ ] Credentials PDF, password-protected, sent to Foundation Gmail
-- [ ] Pinned GitHub Issue: "V2 Roadmap" with deferred features from §13
+- [ ] Pinned GitHub Issue: "V2 Roadmap" with deferred features from §14
 - [ ] README.md complete
 - [ ] `docs/RESTORE.md` written
 - [ ] Fork repo to personal GitHub (before access changes)
@@ -1656,52 +1657,74 @@ PRAGMA foreign_keys = ON;
 
 ---
 
+### PHASE 13 — Member Self-Service Portal (3–4 days)
+
+**Goal:** Foundation members can log in with the `member` role and view only their own data. No write access, strict row-level security.
+
+**Sub-phases:**
+
+**13.1 API routes (member-scoped)**
+- [ ] `GET /api/me/subscriptions` — member's own subscription history (all years)
+- [ ] `GET /api/me/donations` — member's own donation history
+- [ ] `GET /api/me/dues` — outstanding months where status='due'
+- [ ] `PATCH /api/me/profile` — update own phone and email only
+- [ ] Every query binds `WHERE member_id = [authed user's linked member id]`
+- [ ] A `member_id` column links a `users` row to a `members` row — add to users table via migration `004_add_member_user_link.sql`
+
+**13.2 Migration: link users to members**
+- [ ] `cloudflare/migrations/004_add_member_user_link.sql` — adds `member_id TEXT REFERENCES members(id)` to the users table (nullable; only set for role='member')
+- [ ] Apply locally and remotely
+
+**13.3 Invite flow (admin only)**
+- [ ] Admin can invite a member from the member profile page: enter email → creates a `users` row with `role='member'`, `must_change_password=1`, `member_id` linked, sends invite email via Resend
+- [ ] `POST /api/admin/invite-member` — admin-only
+- [ ] Invite email contains a one-time password reset link
+
+**13.4 UI — member dashboard (`/me`)**
+- [ ] Separate layout for member role — simpler, no sidebar nav to Foundation data
+- [ ] Landing page: outstanding dues (prominent), total contributed, quick stats
+- [ ] Subscription history: year tabs, P/D/N/A cells (read-only, same chip design)
+- [ ] Donation history: date, type, amount, mode
+- [ ] Personal details: name (read-only), email and phone (editable)
+- [ ] No access to `/dashboard`, `/ledger`, `/members`, or any other Foundation-wide page — redirect to `/me` if a member role tries to access those
+
+**13.5 Row-level security enforcement**
+- [ ] Every `/api/me/*` route calls `isMember(user.role)` — returns 403 to non-members
+- [ ] Every query uses `WHERE member_id = ?` bound to the authed user's `member_id`
+- [ ] No route in `/api/me/*` ever returns data for a different `member_id`
+- [ ] Middleware redirects `member` role away from non-`/me` app routes
+
+**13.6 Mobile pass**
+- [ ] `/me` dashboard usable at 360px — members will primarily use phones
+- [ ] Subscription grid scrolls horizontally with sticky labels
+- [ ] Personal details form accessible with single column on mobile
+
+**13.7 Review gate**
+- [ ] Member can log in, sees only their own data
+- [ ] Member cannot access `/dashboard`, `/ledger`, or any `/members` route
+- [ ] A crafted API request to `/api/me/subscriptions` with a different `member_id` returns no data (not 403 — just empty)
+- [ ] Admin invite flow creates user, sends email, member can set password and log in
+- [ ] Profile update (phone/email) persists and logs to audit_log
+- [ ] No TypeScript errors
+- [ ] Mobile: every action works at 360px
+- [ ] Commit: `feat: member self-service portal with row-level security`
+
+---
+
 ## 13. DEFERRED TO V2 (do NOT build in V1)
 
 Documented only so you don't accidentally start on them.
 
-### 13.1 Member self-service portal (highest priority for V2)
-
-A member login portal has been requested by the client. It is deferred from V1 not because it is technically hard, but because of operational complexity that must be resolved first.
-
-**What a member would see (their own data only):**
-- Subscription history — which months paid/due, amounts
-- Donation history — what they gave, dates, receipts
-- Outstanding dues — how much they owe
-- Personal details — update their own phone and email
-- Assistance received — only their own medical/scholarship records
-- Annual general body summary PDF — aggregate numbers, not the full ledger
-
-**What a member would NOT see:**
-- Any other member's data (not even names or codes)
-- The full ledger or transaction history
-- Donation amounts from others
-- Medical cases (even anonymised — too sensitive)
-- Any administrative function
-
-**Technical implementation:**
-- `member` role is already in the V1 schema (`002_update_user_roles.sql`) — no new migration needed when V2 portal is built; just wire up the UI and API routes
-- Every member-facing API route must enforce `WHERE member_id = [logged-in member's id]` — row-level security server-side on every query, not just hidden in UI
-- A member crafting a direct API request for another member's data must get back nothing
-
-**Pre-conditions before building (answers needed from client):**
-1. Family situation: husband pays for family account — who gets the login? Is a member a person or a household?
-2. Phone-only members: ~5 members have no email on record — how do they receive an invite?
-3. Is the Treasurer willing to manage password resets for ~25 members?
-4. How do we handle partial adoption: app must work correctly whether 5 or 25 members have activated their login
-
-### 13.2 Other V2 items
-
-2. In-app UPI/Razorpay payments
-3. Scholarship application engine (document upload, approval workflow)
-4. Public fundraising / medical campaign pages
-5. Chit-fund module
-6. WhatsApp/SMS notifications (only email in V1)
-7. In-app approval workflow for board decisions
-8. 80G tax receipts
-9. Trend analytics beyond dashboard
-10. Multi-language UI (English only in V1)
-11. Native iOS/Android apps (responsive PWA in V1)
+1. In-app UPI/Razorpay payments
+2. Scholarship application engine (document upload, approval workflow)
+3. Public fundraising / medical campaign pages
+4. Chit-fund module
+5. WhatsApp/SMS notifications (only email in V1)
+6. In-app approval workflow for board decisions
+7. 80G tax receipts
+8. Trend analytics beyond dashboard
+9. Multi-language UI (English only in V1)
+10. Native iOS/Android apps (responsive PWA in V1)
 
 ---
 
