@@ -1,12 +1,14 @@
 // TypeScript interfaces matching the D1 database schema exactly.
-// Keep in sync with cloudflare/migrations/001_initial_schema.sql
+// Keep in sync with cloudflare/migrations/ (latest: 002_update_user_roles.sql)
+
+export type UserRole = "admin" | "editor" | "viewer" | "member";
 
 export interface User {
   id: string;
   email: string;
   password_hash: string;
   name: string;
-  role: "admin" | "viewer";
+  role: UserRole;
   is_active: 0 | 1;
   must_change_password: 0 | 1;
   two_factor_secret: string | null;

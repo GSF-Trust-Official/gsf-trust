@@ -16,13 +16,26 @@ The Foundation currently manages ~₹4,57,900 across two accounts (General and Z
 
 ### 0.2 Who uses it
 
-| Role | Count | Access |
-|------|-------|--------|
-| Treasurer (Admin) | 1 | Full read/write |
-| Joint Treasurer (optional) | 0–1 | Write-capable backup |
-| Board Members (Viewers) | up to 12 | View-only, audit-ready |
+| Role | DB value | Count | Access |
+|------|----------|-------|--------|
+| Treasurer | `admin` | 1 | Full read/write + user management + soft-delete |
+| Board Member (write) | `editor` | 0–12 | Log transactions, edit members — cannot delete or manage users |
+| Board Member (read-only) | `viewer` | 0–12 | View all Foundation data, audit-ready, no write access |
+| Foundation Member | `member` | up to ~50 | See only their own data (subs, donations, dues) — V2 UI, schema ready in V1 |
 
-Members themselves do **not** log in. V1 workflow: treasurer logs everything; board reviews.
+**Permission matrix:**
+
+| Action | admin | editor | viewer | member |
+|--------|-------|--------|--------|--------|
+| View full Foundation data | ✅ | ✅ | ✅ | ❌ |
+| View own data only | ✅ | ✅ | ✅ | ✅ |
+| Log transactions (subs, donations, expenses) | ✅ | ✅ | ❌ | ❌ |
+| Create/edit members | ✅ | ✅ | ❌ | ❌ |
+| Soft-delete records | ✅ | ❌ | ❌ | ❌ |
+| Manage users (invite, change roles) | ✅ | ❌ | ❌ | ❌ |
+| Settings & backup | ✅ | ❌ | ❌ | ❌ |
+
+The `member` role is in the schema from day one (V1) so existing auth and JWT infrastructure works. The member-facing **UI** (self-service portal) is built in V2 — see §13.
 
 ### 0.3 Non-negotiable principles
 
@@ -114,14 +127,20 @@ node -e "console.log(require('crypto').randomBytes(64).toString('hex'))"
 ### 2.3 wrangler.toml
 
 ```toml
-name = "gsf-accounts"
-compatibility_date = "2024-01-01"
+name = "gsf-trust"
+compatibility_date = "2024-09-23"
 compatibility_flags = ["nodejs_compat"]
+workers_dev = true
+
+main = ".open-next/worker.js"
+
+[assets]
+directory = ".open-next/assets"
 
 [[d1_databases]]
 binding = "DB"
 database_name = "gsf-accounts-db"
-database_id = "REPLACE_WITH_ACTUAL_ID"
+database_id = "f8bf6798-a34b-4e2f-b1fe-4a1b1ee0cea7"
 
 # File exports and backups go to Google Drive — R2 is not used.
 ```
@@ -130,8 +149,9 @@ Commit this file. It contains no secrets.
 
 ### 2.4 Branches and deploys
 
-- `main` → production (auto-deploys to `gsf-accounts.pages.dev`)
-- `dev` → preview (auto-deploys to `dev.gsf-accounts.pages.dev`) — share this URL with the Treasurer weekly
+- `main` → production (auto-deploys, live at `https://gsf-trust.gsftrust-official.workers.dev`)
+- `dev` → preview — share this URL with the Treasurer weekly
+- `feature/xxx` → branch from `dev`, merge back to `dev`
 - `feature/xxx` → branch from `dev`, merge back to `dev`
 
 **Flow:** `feature/xxx` → PR to `dev` → client reviews preview → PR to `main` at phase end → production auto-deploy.
@@ -407,7 +427,7 @@ CREATE TABLE IF NOT EXISTS users (
   email TEXT NOT NULL UNIQUE,
   password_hash TEXT NOT NULL,
   name TEXT NOT NULL,
-  role TEXT NOT NULL DEFAULT 'viewer' CHECK (role IN ('admin', 'viewer')),
+  role TEXT NOT NULL DEFAULT 'viewer' CHECK (role IN ('admin', 'editor', 'viewer', 'member')),
   is_active INTEGER NOT NULL DEFAULT 1,
   must_change_password INTEGER NOT NULL DEFAULT 0,
   two_factor_secret TEXT,
@@ -667,7 +687,7 @@ export const config = {
 
 ### 7.3 Password rules
 
-- Minimum 12 characters for admins, 10 for viewers
+- Minimum 12 characters for admins and editors, 10 for viewers
 - Hash with bcryptjs, **12 rounds** minimum
 - On first login from invited account, force password change (`must_change_password = 1`)
 - Rate-limit login attempts: 5 failures in 15 min → lock account for 15 min
@@ -675,17 +695,59 @@ export const config = {
 
 ### 7.4 Role enforcement pattern
 
-Every protected route checks role explicitly:
+Every protected route checks role explicitly. Use these helpers:
 
 ```ts
-// app/api/subscriptions/route.ts
+// lib/auth.ts
+export const canWrite = (role: UserRole) =>
+  role === 'admin' || role === 'editor';
+
+export const isAdmin = (role: UserRole) =>
+  role === 'admin';
+
+export const isMember = (role: UserRole) =>
+  role === 'member';
+
+// Member routes: enforce row-level isolation — always add WHERE member_id = userId
+export const requireOwnData = (requestedMemberId: string, authedMemberId: string) =>
+  requestedMemberId === authedMemberId;
+```
+
+```ts
+// app/api/subscriptions/route.ts — admin and editor can log transactions
 export async function POST(req: Request) {
   const user = await getUserFromRequest(req);
   if (!user) return json({ error: 'Unauthorized' }, 401);
-  if (user.role !== 'admin') return json({ error: 'Forbidden' }, 403);
+  if (!canWrite(user.role)) return json({ error: 'Forbidden' }, 403);
   // ... proceed
 }
+
+// app/api/members/[id]/route.ts — DELETE is admin-only (soft delete)
+export async function DELETE(req: Request) {
+  const user = await getUserFromRequest(req);
+  if (!user) return json({ error: 'Unauthorized' }, 401);
+  if (!isAdmin(user.role)) return json({ error: 'Forbidden' }, 403);
+  // ... proceed
+}
+
+// app/api/me/subscriptions/route.ts — member sees only their own rows
+export async function GET(req: Request) {
+  const user = await getUserFromRequest(req);
+  if (!user) return json({ error: 'Unauthorized' }, 401);
+  if (!isMember(user.role)) return json({ error: 'Forbidden' }, 403);
+  // Always bind member_id to prevent horizontal privilege escalation
+  const rows = await db.prepare(
+    'SELECT * FROM subscriptions WHERE member_id = ?'
+  ).bind(user.memberId).all();
+  // ...
+}
 ```
+
+**Summary of what each role can do:**
+- `admin` — everything
+- `editor` — all writes except soft-delete and user management
+- `viewer` — read-only, all Foundation data
+- `member` — read-only, own data only, enforced at query level (V2 UI, V1 schema)
 
 Never assume the middleware is enough. **Defense in depth.**
 
@@ -985,56 +1047,52 @@ Write it as you build, not at the end. It should contain:
 
 **Timeline: ~7 weeks total.** Every phase has subphases, explicit tasks, and an end-of-phase review. Do not skip the reviews.
 
-### PHASE 0 — Project Setup & First Deploy (2–3 days)
+### PHASE 0 — Project Setup & First Deploy ✅ COMPLETE (23 Apr 2026)
 
-**Goal:** A blank Next.js app deployed to Cloudflare Pages on a live URL before writing any feature code.
+**Goal:** A blank Next.js app deployed to Cloudflare Workers on a live URL before writing any feature code.
+
+**Live URL:** https://gsf-trust.gsftrust-official.workers.dev
 
 **Sub-phases:**
 
-**0.1 Repo bootstrap**
-- [ ] Clone the Foundation's empty repo
-- [ ] Run `create-next-app` with TypeScript, Tailwind, App Router
-- [ ] Install all dependencies listed in §1.1
-- [ ] Initialize shadcn/ui
-- [ ] Create folder structure from §3
+**0.1 Repo bootstrap** ✅
+- [x] Clone the Foundation's empty repo (`GSF-Trust-Official/gsf-trust`)
+- [x] Run `create-next-app` with TypeScript, Tailwind, App Router
+- [x] Install all dependencies listed in §1.1
+- [x] Initialize shadcn/ui
+- [x] Create folder structure from §3
 
-**0.2 Cloudflare config**
-- [ ] Write `next.config.ts` with `@cloudflare/next-on-pages` dev platform
-- [ ] Add `build:cf`, `preview:cf`, `deploy` scripts to `package.json`
-- [ ] Create `wrangler.toml`
-- [ ] Run `wrangler d1 create gsf-accounts-db`
-- [ ] Update `wrangler.toml` with the database ID
-- [ ] ~~Run `wrangler r2 bucket create gsf-accounts-files`~~ — R2 not used; Google Drive handles file storage
+**0.2 Cloudflare config** ✅
+- [x] Add `build:cf`, `preview:cf`, `deploy` scripts to `package.json`
+- [x] Create `wrangler.toml` (name: `gsf-trust`, compatibility_date: `2024-09-23`, nodejs_compat)
+- [x] Run `wrangler d1 create gsf-accounts-db` (ID: `f8bf6798-a34b-4e2f-b1fe-4a1b1ee0cea7`)
+- [x] ~~R2~~ — not used; Google Drive handles file storage
+- [x] Migrated from deprecated `@cloudflare/next-on-pages` to `@opennextjs/cloudflare`
 
-**0.3 Env vars & secrets**
-- [ ] Generate JWT_SECRET (64 random bytes hex)
-- [ ] Create `.env.local` with all required vars
-- [ ] Create `.env.example` (committed, empty values)
-- [ ] Confirm `.env.local` is gitignored
+**0.3 Env vars & secrets** ✅
+- [x] Generate JWT_SECRET and add to Cloudflare dashboard + `.env.local`
+- [x] Create `.env.local` locally
+- [x] Create `.env.example` (committed, empty values)
+- [x] Confirm `.env.local` is gitignored
 
-**0.4 Tailwind theme**
-- [ ] Extend `tailwind.config.ts` with color tokens from §5.1
-- [ ] Load Plus Jakarta Sans, Inter, JetBrains Mono via `next/font`
-- [ ] Create `app/globals.css` with base styles
+**0.4 Tailwind theme** ✅
+- [x] Brand colors defined in `globals.css` `@theme inline` block (Tailwind v4 CSS-first config)
+- [x] Load Plus Jakarta Sans, Inter, JetBrains Mono via `next/font`
+- [x] `app/globals.css` with base styles
 
-**0.5 First deploy**
-- [ ] Push `main` and `dev` branches to GitHub
-- [ ] In Cloudflare dashboard: Workers & Pages → Create → Connect to Git
-- [ ] Configure build: command `npm run build:cf`, output `.vercel/output/static`
-- [ ] Set production branch `main`, preview branch `dev`
-- [ ] Add all env vars for both Production and Preview
-- [ ] Deploy and confirm the blank Next.js page loads
+**0.5 First deploy** ✅
+- [x] `main` and `dev` branches pushed to `GSF-Trust-Official/gsf-trust`
+- [x] Cloudflare Workers project connected via GitHub
+- [x] Build command: `npm run build:cf`, Deploy command: `npx wrangler deploy`
+- [x] D1 database bound (`env.DB`)
+- [x] JWT_SECRET and NODE_ENV added as env vars in Cloudflare dashboard
 
-**0.6 Review gate**
-- [ ] Production URL loads without errors
-- [ ] Dev preview URL loads and differs (e.g. console.log confirms)
-- [ ] D1 database exists and is bound
-- [ ] ~~R2 bucket~~ — not used; Google Drive is the file storage layer
-- [ ] No errors in Cloudflare build log
-- [ ] No TypeScript errors locally
-- [ ] `.gitignore` excludes `.env.local`, `.vercel/`, `node_modules/`
-- [ ] README has "Getting Started" section
-- [ ] Commit: `chore: initial project setup, cloudflare pages connected`
+**0.6 Review gate** ✅
+- [x] Production URL loads: https://gsf-trust.gsftrust-official.workers.dev
+- [x] D1 database exists and is bound (confirmed in deploy log)
+- [x] Build completes without errors
+- [x] TypeScript passes clean locally
+- [x] `.gitignore` excludes `.env.local`, `.open-next/`, `node_modules/`
 
 ---
 
@@ -1045,27 +1103,52 @@ Write it as you build, not at the end. It should contain:
 **Sub-phases:**
 
 **1.1 Schema**
-- [ ] Write `cloudflare/migrations/001_initial_schema.sql` from §6.2
-- [ ] Apply locally: `wrangler d1 execute gsf-accounts-db --local --file=...`
-- [ ] Apply remote
-- [ ] Write `002_seed_treasurer.sql` (generate bcrypt hash locally, commit only the hash, never plaintext)
-- [ ] Apply seed locally and remote
+- [x] `cloudflare/migrations/001_initial_schema.sql` written and applied remotely
+- [ ] `cloudflare/migrations/002_update_user_roles.sql` — recreate users table with all four roles in CHECK (see below)
+- [ ] Apply 002 locally and remotely
+- [ ] `cloudflare/migrations/003_seed_treasurer.sql` — generate bcrypt hash locally, commit only the hash, never plaintext
+- [ ] Apply 003 locally and remotely
+
+**002_update_user_roles.sql pattern:**
+```sql
+PRAGMA foreign_keys = OFF;
+CREATE TABLE users_new (
+  id TEXT PRIMARY KEY DEFAULT (lower(hex(randomblob(16)))),
+  email TEXT NOT NULL UNIQUE,
+  password_hash TEXT NOT NULL,
+  name TEXT NOT NULL,
+  role TEXT NOT NULL DEFAULT 'viewer' CHECK (role IN ('admin', 'editor', 'viewer', 'member')),
+  is_active INTEGER NOT NULL DEFAULT 1,
+  must_change_password INTEGER NOT NULL DEFAULT 0,
+  two_factor_secret TEXT,
+  created_at TEXT DEFAULT (datetime('now')),
+  updated_at TEXT DEFAULT (datetime('now')),
+  last_login TEXT
+);
+INSERT INTO users_new SELECT * FROM users;
+DROP TABLE users;
+ALTER TABLE users_new RENAME TO users;
+PRAGMA foreign_keys = ON;
+```
 
 **1.2 Type definitions**
-- [ ] Create `types/index.ts` with interfaces matching every table
-- [ ] Verify every nullable column is `T | null` in TS
+- [x] `types/index.ts` created with interfaces for all tables
+- [x] `UserRole` type exported: `'admin' | 'editor' | 'viewer' | 'member'` — `User.role` updated
 
 **1.3 DB helper layer**
-- [ ] `lib/db.ts` — exports `getDb(env)` that returns typed D1 client
+- [x] `lib/db.ts` — `getDb(env)`, `Env` interface
 - [ ] `lib/queries/users.ts` — `getUserByEmail`, `updateLastLogin`
-- [ ] `lib/audit.ts` — the `logAudit` helper from §9
+- [x] `lib/audit.ts` — `auditStatement()` helper
 
 **1.4 Auth**
-- [ ] `lib/auth.ts` — `hashPassword`, `verifyPassword`, `signToken`, `verifyToken`
+- [x] `lib/auth.ts` — `hashPassword`, `verifyPassword`, `signToken`, `verifyToken`
+- [x] `lib/email.ts` — Resend wrapper
+- [x] `lib/utils.ts` — `cn()`, `formatINR()`, `formatDate()`, `formatMonthYear()`
+- [x] `middleware.ts` — JWT guard on protected paths
+- [ ] Add `canWrite(role)` and `isAdmin(role)` helpers to `lib/auth.ts` (see §7.4)
 - [ ] Zod schema for login input
 - [ ] `app/api/auth/login/route.ts` — validates, checks password, sets cookie, logs audit
 - [ ] `app/api/auth/logout/route.ts` — clears cookie, logs audit
-- [ ] `middleware.ts` — the code from §7.2
 - [ ] Login rate limiting (simple in-memory or D1-backed counter)
 
 **1.5 UI shell**
@@ -1073,6 +1156,7 @@ Write it as you build, not at the end. It should contain:
 - [ ] `app/(app)/layout.tsx` — sidebar layout, responsive (sidebar → bottom nav on mobile)
 - [ ] `app/(app)/dashboard/page.tsx` — placeholder "Welcome [name]"
 - [ ] Sign out button in sidebar
+- [ ] Sidebar shows role-appropriate actions (editors see Log buttons; viewers do not)
 
 **1.6 Mobile pass**
 - [ ] Test login at 360px — form is usable, tap targets are 44px+
@@ -1155,7 +1239,9 @@ Write it as you build, not at the end. It should contain:
 - [ ] Search works instantly
 - [ ] Pagination works
 - [ ] All writes log to `audit_log`
-- [ ] Viewers (role=viewer) see list but Add/Edit buttons hidden
+- [ ] Viewers (role=viewer) see list but Add/Edit/Delete buttons hidden
+- [ ] Editors (role=editor) can Add/Edit but Deactivate button is hidden
+- [ ] Viewer and editor API calls to DELETE return 403
 - [ ] Viewer API calls to POST/PATCH return 403
 - [ ] Mobile: every action works with thumb, no horizontal overflow
 - [ ] **Security review:** Input validation on every route, role check on every mutation
@@ -1194,7 +1280,7 @@ Write it as you build, not at the end. It should contain:
 
 **3.6 UI — Quick actions**
 - [ ] Three buttons: Log Subscription, Log Donation, Log Expense
-- [ ] Hidden for viewers
+- [ ] Visible for admin and editor; hidden for viewer
 - [ ] Modals open but may contain placeholder content until Phases 4–6
 
 **3.7 Mobile pass**
@@ -1572,11 +1658,42 @@ Write it as you build, not at the end. It should contain:
 
 ## 13. DEFERRED TO V2 (do NOT build in V1)
 
-Documented only so you don't accidentally start on them:
+Documented only so you don't accidentally start on them.
 
-1. Member self-service portal
+### 13.1 Member self-service portal (highest priority for V2)
+
+A member login portal has been requested by the client. It is deferred from V1 not because it is technically hard, but because of operational complexity that must be resolved first.
+
+**What a member would see (their own data only):**
+- Subscription history — which months paid/due, amounts
+- Donation history — what they gave, dates, receipts
+- Outstanding dues — how much they owe
+- Personal details — update their own phone and email
+- Assistance received — only their own medical/scholarship records
+- Annual general body summary PDF — aggregate numbers, not the full ledger
+
+**What a member would NOT see:**
+- Any other member's data (not even names or codes)
+- The full ledger or transaction history
+- Donation amounts from others
+- Medical cases (even anonymised — too sensitive)
+- Any administrative function
+
+**Technical implementation:**
+- `member` role is already in the V1 schema (`002_update_user_roles.sql`) — no new migration needed when V2 portal is built; just wire up the UI and API routes
+- Every member-facing API route must enforce `WHERE member_id = [logged-in member's id]` — row-level security server-side on every query, not just hidden in UI
+- A member crafting a direct API request for another member's data must get back nothing
+
+**Pre-conditions before building (answers needed from client):**
+1. Family situation: husband pays for family account — who gets the login? Is a member a person or a household?
+2. Phone-only members: ~5 members have no email on record — how do they receive an invite?
+3. Is the Treasurer willing to manage password resets for ~25 members?
+4. How do we handle partial adoption: app must work correctly whether 5 or 25 members have activated their login
+
+### 13.2 Other V2 items
+
 2. In-app UPI/Razorpay payments
-3. Scholarship application engine (with document upload, approval workflow)
+3. Scholarship application engine (document upload, approval workflow)
 4. Public fundraising / medical campaign pages
 5. Chit-fund module
 6. WhatsApp/SMS notifications (only email in V1)
