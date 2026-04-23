@@ -11,6 +11,8 @@ const config: OpenNextConfig = {
       queue: "direct",
     },
   },
+  // required for jose (JWT) and bcryptjs to work in the edge runtime
+  edgeExternals: ["node:crypto"],
   middleware: {
     external: true,
     override: {
