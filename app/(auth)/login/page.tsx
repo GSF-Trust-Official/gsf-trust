@@ -1,18 +1,18 @@
+import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
+import { LoginForm } from "@/components/forms/LoginForm";
+
 export default function LoginPage() {
   return (
-    <div className="w-full max-w-sm">
-      <div className="text-center mb-8">
-        <h1 className="font-headline text-2xl font-bold text-on-surface">
+    <Card className="w-full max-w-sm shadow-md">
+      <CardHeader className="text-center space-y-1">
+        <CardTitle className="font-headline text-2xl text-on-surface">
           GSF Foundation
-        </h1>
-        <p className="text-sm text-on-surface-variant mt-1">
-          Sign in to your account
-        </p>
-      </div>
-      {/* LoginForm component goes here — Phase 1 */}
-      <p className="text-center text-sm text-muted-foreground">
-        Login form coming in Phase 1
-      </p>
-    </div>
+        </CardTitle>
+        <CardDescription>Sign in to your account</CardDescription>
+      </CardHeader>
+      <CardContent>
+        <LoginForm />
+      </CardContent>
+    </Card>
   );
 }
