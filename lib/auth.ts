@@ -1,9 +1,12 @@
 import { SignJWT, jwtVerify } from "jose";
 import bcrypt from "bcryptjs";
-import type { JwtPayload } from "@/types";
+import type { JwtPayload, UserRole } from "@/types";
 
 const BCRYPT_ROUNDS = 12;
 const TOKEN_EXPIRY = "8h";
+const COOKIE_NAME = "gsf-session";
+
+// ─── Password helpers ────────────────────────────────────────────────────────
 
 export async function hashPassword(password: string): Promise<string> {
   return bcrypt.hash(password, BCRYPT_ROUNDS);
@@ -16,13 +19,17 @@ export async function verifyPassword(
   return bcrypt.compare(password, hash);
 }
 
+// ─── JWT helpers ─────────────────────────────────────────────────────────────
+
 function getSecret(): Uint8Array {
   const secret = process.env.JWT_SECRET;
   if (!secret) throw new Error("JWT_SECRET is not set");
   return new TextEncoder().encode(secret);
 }
 
-export async function signToken(payload: Omit<JwtPayload, "exp">): Promise<string> {
+export async function signToken(
+  payload: Omit<JwtPayload, "exp">
+): Promise<string> {
   return new SignJWT(payload as Record<string, unknown>)
     .setProtectedHeader({ alg: "HS256" })
     .setIssuedAt()
@@ -34,3 +41,49 @@ export async function verifyToken(token: string): Promise<JwtPayload> {
   const { payload } = await jwtVerify(token, getSecret());
   return payload as unknown as JwtPayload;
 }
+
+// ─── Role guards ─────────────────────────────────────────────────────────────
+// Use these in every API route handler — never rely on middleware alone.
+
+/** admin + editor can log and edit transactions, manage members */
+export function canWrite(role: UserRole): boolean {
+  return role === "admin" || role === "editor";
+}
+
+/** admin only — soft-delete, user management, settings, approve registrations */
+export function isAdmin(role: UserRole): boolean {
+  return role === "admin";
+}
+
+/** member only — row-level self-service portal */
+export function isMember(role: UserRole): boolean {
+  return role === "member";
+}
+
+// ─── Request helper ───────────────────────────────────────────────────────────
+
+/**
+ * Extracts and verifies the session JWT from the request cookie.
+ * Returns the decoded payload, or null if missing / invalid.
+ * Use at the top of every protected route handler.
+ */
+export async function getUserFromRequest(
+  req: Request
+): Promise<JwtPayload | null> {
+  const cookieHeader = req.headers.get("cookie") ?? "";
+  const match = cookieHeader
+    .split(";")
+    .map((c) => c.trim())
+    .find((c) => c.startsWith(`${COOKIE_NAME}=`));
+
+  if (!match) return null;
+
+  const token = match.slice(COOKIE_NAME.length + 1);
+  try {
+    return await verifyToken(token);
+  } catch {
+    return null;
+  }
+}
+
+export { COOKIE_NAME };
