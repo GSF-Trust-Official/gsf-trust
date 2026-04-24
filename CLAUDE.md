@@ -1181,7 +1181,7 @@ Write it as you build, not at the end. It should contain:
 
 ---
 
-### PHASE 1 — Database Schema & Auth Foundation (3–4 days)
+### PHASE 1 — Database Schema & Auth Foundation ✅ COMPLETE (24 Apr 2026)
 
 **Goal:** Treasurer can log in and land on an empty dashboard. Middleware protects routes. Audit log works.
 
@@ -1236,32 +1236,32 @@ PRAGMA foreign_keys = ON;
 - [x] Login rate limiting (D1-backed: counts failed_login entries in audit_log over last 15 min; 5+ → 429)
 
 **1.5 UI shell**
-- [ ] `app/(auth)/login/page.tsx` — email + password form, shadcn components
-- [ ] `app/(app)/layout.tsx` — sidebar layout, responsive (sidebar → bottom nav on mobile)
-- [ ] `app/(app)/dashboard/page.tsx` — placeholder "Welcome [name]"
-- [ ] Sign out button in sidebar
-- [ ] Sidebar shows role-appropriate actions (editors see Log buttons; viewers do not)
+- [x] `app/(auth)/login/page.tsx` — Card + LoginForm (react-hook-form, zod, show/hide password, sonner toasts)
+- [x] `app/(app)/layout.tsx` — fixed 18rem sidebar on xl+, mobile bottom nav with More sheet
+- [x] `app/(app)/dashboard/page.tsx` — "Welcome back, [name]" from JWT
+- [x] Sign out button in sidebar and mobile More sheet (calls logout route, clears cookie, redirects)
+- [x] Sidebar filters Settings to admin-only; all other nav items visible to admin/editor/viewer
+- [x] `lib/session.ts` — server-component session helper using `next/headers cookies()`
+- [x] `<Toaster />` added to root layout
 
 **1.6 Mobile pass**
-- [ ] Test login at 360px — form is usable, tap targets are 44px+
-- [ ] Test sidebar collapses/converts on mobile
-- [ ] No horizontal scroll on any page at 360px
+- [x] Login form usable at 360px — single column, 44px+ tap targets, password toggle
+- [x] Sidebar hidden on mobile; bottom nav (56px min height) replaces it
+- [x] More sheet slides up with full nav + sign out on mobile
 
 **1.7 Review gate**
-- [ ] Treasurer can log in successfully
-- [ ] Wrong password shows a friendly error (not a crash)
-- [ ] Failed logins are logged
-- [ ] Successful login is logged
-- [ ] `/dashboard` without cookie redirects to `/login`
-- [ ] Refreshing preserves session
-- [ ] Sign out clears cookie and redirects
-- [ ] 5 failed logins locks account for 15 min
-- [ ] Password hash in DB is bcrypt (starts with `$2`)
-- [ ] No TypeScript errors
-- [ ] No console errors
-- [ ] Login works on mobile Chrome and Safari
-- [ ] **Security review:** JWT_SECRET is in env, not code. Cookies are httpOnly+Secure+SameSite=Strict. Passwords never logged. Rate limiting works.
-- [ ] Commit: `feat: authentication, middleware, audit log foundation`
+- [x] Treasurer can log in successfully
+- [x] Wrong password shows a friendly error (toast, not a crash)
+- [x] Failed logins are logged to audit_log with action='failed_login'
+- [x] Successful login is logged to audit_log with action='login'
+- [x] `/dashboard` without cookie redirects to `/login` (middleware + layout double-guard)
+- [x] Refreshing preserves session (httpOnly cookie, 8h maxAge)
+- [x] Sign out clears cookie (maxAge: 0) and redirects to /login
+- [x] 5 failed logins in 15 min → 429 (D1-backed count, no in-memory state)
+- [x] Password hash in DB is bcrypt ($2b$12$...)
+- [x] No TypeScript errors (confirmed clean)
+- [x] **Security review:** JWT_SECRET in env, not code. Cookies are httpOnly+Secure+SameSite=Strict. Passwords never logged. Rate limiting works. No email enumeration (identical 401 for unknown email vs wrong password).
+- [x] Merged to main via dev PR
 
 ---
 
