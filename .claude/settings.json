@@ -1,0 +1,11 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(npx shadcn@latest add input label card --yes)",
+      "Bash(git commit -m ' *)",
+      "Bash(git fetch *)",
+      "Bash(npx shadcn@latest add sheet --yes)",
+      "Bash(wrangler d1 *)"
+    ]
+  }
+}

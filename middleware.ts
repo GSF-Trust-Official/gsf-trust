@@ -13,6 +13,7 @@ const PROTECTED_PATHS = [
   "/scholarship",
   "/reports",
   "/settings",
+  "/change-password",
   "/api",
 ];
 
