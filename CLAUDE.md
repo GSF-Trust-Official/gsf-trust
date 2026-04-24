@@ -1189,10 +1189,10 @@ Write it as you build, not at the end. It should contain:
 
 **1.1 Schema**
 - [x] `cloudflare/migrations/001_initial_schema.sql` written and applied remotely
-- [ ] `cloudflare/migrations/002_update_user_roles.sql` — recreate users table with all four roles in CHECK (see below)
-- [ ] Apply 002 locally and remotely
-- [ ] `cloudflare/migrations/003_seed_treasurer.sql` — generate bcrypt hash locally, commit only the hash, never plaintext
-- [ ] Apply 003 locally and remotely
+- [x] `cloudflare/migrations/002_update_user_roles.sql` — recreate users table with all four roles in CHECK (see below)
+- [x] Apply 002 locally and remotely
+- [x] `cloudflare/migrations/003_seed_treasurer.sql` — bcrypt hash committed (never plaintext); temp password `GSFAdmin2026!`, `must_change_password=1`
+- [x] Apply 003 locally; apply remotely after updating email to real Treasurer email
 
 **002_update_user_roles.sql pattern:**
 ```sql
