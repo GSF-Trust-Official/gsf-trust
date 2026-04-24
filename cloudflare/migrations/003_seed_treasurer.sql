@@ -5,7 +5,7 @@
 
 INSERT INTO users (email, password_hash, name, role, is_active, must_change_password)
 VALUES (
-  'treasurer@gsffoundation.org',
+  'gsftrust.official@gmail.com',
   '$2b$12$ul0LgHdJrCXR1dcUhamYIeRwHhg22yVEa17ErWlTSVP2xyk1YCIhG',
   'Treasurer',
   'admin',
