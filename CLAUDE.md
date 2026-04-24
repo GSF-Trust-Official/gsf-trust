@@ -1231,9 +1231,9 @@ PRAGMA foreign_keys = ON;
 - [x] `lib/utils.ts` — `cn()`, `formatINR()`, `formatDate()`, `formatMonthYear()`
 - [x] `middleware.ts` — JWT guard on protected paths
 - [x] Zod schema for login input (`lib/validators/auth.ts`)
-- [ ] `app/api/auth/login/route.ts` — validates, checks password, sets cookie, logs audit
-- [ ] `app/api/auth/logout/route.ts` — clears cookie, logs audit
-- [ ] Login rate limiting (simple in-memory or D1-backed counter)
+- [x] `app/api/auth/login/route.ts` — validates, checks password, sets cookie, logs audit
+- [x] `app/api/auth/logout/route.ts` — clears cookie, logs audit
+- [x] Login rate limiting (D1-backed: counts failed_login entries in audit_log over last 15 min; 5+ → 429)
 
 **1.5 UI shell**
 - [ ] `app/(auth)/login/page.tsx` — email + password form, shadcn components
