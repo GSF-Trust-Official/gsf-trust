@@ -81,6 +81,7 @@ export async function POST(req: Request): Promise<NextResponse> {
       sub: user.id,
       role: user.role,
       name: user.name,
+      tokenVersion: user.token_version,
     });
 
     await db.batch([

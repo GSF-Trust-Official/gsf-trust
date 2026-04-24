@@ -1,5 +1,6 @@
 import { SignJWT, jwtVerify } from "jose";
 import bcrypt from "bcryptjs";
+import type { D1Database } from "@cloudflare/workers-types";
 import type { JwtPayload, UserRole } from "@/types";
 
 const BCRYPT_ROUNDS = 12;
@@ -63,12 +64,14 @@ export function isMember(role: UserRole): boolean {
 // ─── Request helper ───────────────────────────────────────────────────────────
 
 /**
- * Extracts and verifies the session JWT from the request cookie.
- * Returns the decoded payload, or null if missing / invalid.
+ * Extracts and verifies the session JWT from the request cookie, then checks
+ * the embedded tokenVersion against the DB. This means logout and password-change
+ * immediately invalidate existing tokens — stolen cookies don't persist until expiry.
  * Use at the top of every protected route handler.
  */
 export async function getUserFromRequest(
-  req: Request
+  req: Request,
+  db: D1Database
 ): Promise<JwtPayload | null> {
   const cookieHeader = req.headers.get("cookie") ?? "";
   const match = cookieHeader
@@ -80,7 +83,15 @@ export async function getUserFromRequest(
 
   const token = match.slice(COOKIE_NAME.length + 1);
   try {
-    return await verifyToken(token);
+    const payload = await verifyToken(token);
+    const row = await db
+      .prepare(
+        "SELECT token_version FROM users WHERE id = ? AND is_active = 1"
+      )
+      .bind(payload.sub)
+      .first<{ token_version: number }>();
+    if (!row || row.token_version !== payload.tokenVersion) return null;
+    return payload;
   } catch {
     return null;
   }

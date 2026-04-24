@@ -5,18 +5,24 @@ import { auditStatement } from "@/lib/audit";
 
 export async function POST(req: Request): Promise<NextResponse> {
   try {
-    const user = await getUserFromRequest(req);
+    const { env } = getCloudflareContext();
+    const db = env.DB;
+    const user = await getUserFromRequest(req, db);
 
     if (user) {
-      const { env } = getCloudflareContext();
-      const db = env.DB;
       const ip =
         req.headers.get("cf-connecting-ip") ??
         req.headers.get("x-forwarded-for") ??
         undefined;
       const ua = req.headers.get("user-agent") ?? undefined;
 
+      // Increment token_version so the now-cleared cookie can never be replayed.
       await db.batch([
+        db
+          .prepare(
+            "UPDATE users SET token_version = token_version + 1, updated_at = datetime('now') WHERE id = ?"
+          )
+          .bind(user.sub),
         auditStatement(db, {
           userId: user.sub,
           action: "logout",
@@ -39,7 +45,7 @@ export async function POST(req: Request): Promise<NextResponse> {
     return res;
   } catch (err) {
     console.error("POST /api/auth/logout failed", err);
-    // Always clear the cookie even if the audit write fails.
+    // Always clear the cookie even if the DB write fails.
     const res = NextResponse.json({ ok: true });
     res.cookies.set(COOKIE_NAME, "", { path: "/", maxAge: 0 });
     return res;
