@@ -8,8 +8,8 @@
     "start": "next start",
     "lint": "eslint",
     "build:cf": "npx @opennextjs/cloudflare build",
-    "preview:cf": "npm run build:cf && npx wrangler pages dev .open-next/assets",
-    "deploy": "npm run build:cf && npx wrangler pages deploy .open-next/assets"
+    "preview:cf": "npm run build:cf && npx wrangler dev",
+    "deploy": "npm run build:cf && npx wrangler deploy"
   },
   "dependencies": {
     "@base-ui/react": "^1.4.1",
