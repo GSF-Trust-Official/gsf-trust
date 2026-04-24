@@ -1,7 +1,17 @@
 import type { D1Database } from "@cloudflare/workers-types";
 
-// Cloudflare Workers environment bindings.
-// File exports (PDF/Excel) go to Google Drive — no R2 binding needed.
+// Extend the global CloudflareEnv with project-specific bindings so that
+// getCloudflareContext().env.DB is typed without a cast everywhere.
+declare global {
+  interface CloudflareEnv {
+    DB: D1Database;
+    RESEND_API_KEY: string;
+    GOOGLE_DRIVE_FOLDER_ID: string;
+    GOOGLE_DRIVE_SERVICE_ACCOUNT_JSON: string;
+  }
+}
+
+// Kept for files that receive env explicitly (e.g. scripts, tests).
 export interface Env {
   DB: D1Database;
   JWT_SECRET: string;
@@ -10,8 +20,6 @@ export interface Env {
   GOOGLE_DRIVE_SERVICE_ACCOUNT_JSON: string;
 }
 
-// Extracts the D1 database from the Cloudflare env.
-// All Cloudflare-specific access is isolated to this file.
-export function getDb(env: Env): D1Database {
+export function getDb(env: Pick<Env, "DB">): D1Database {
   return env.DB;
 }

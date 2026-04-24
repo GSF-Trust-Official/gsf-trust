@@ -166,7 +166,7 @@ export interface ScholarshipAnnouncement {
 // JWT payload shape
 export interface JwtPayload {
   sub: string;
-  role: "admin" | "viewer";
+  role: UserRole;
   name: string;
   exp: number;
 }
