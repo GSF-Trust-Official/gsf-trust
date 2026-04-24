@@ -5,7 +5,12 @@
       "Bash(git commit -m ' *)",
       "Bash(git fetch *)",
       "Bash(npx shadcn@latest add sheet --yes)",
-      "Bash(wrangler d1 *)"
+      "Bash(wrangler d1 *)",
+      "Bash(timeout 15 wrangler tail --format=pretty)",
+      "Bash(wrangler secret *)",
+      "Bash(wrangler versions *)",
+      "Bash(node -e \"const p=require\\('./package.json'\\); console.log\\(JSON.stringify\\(p.scripts, null, 2\\)\\)\")",
+      "Bash(npx @opennextjs/cloudflare build)"
     ]
   }
 }
