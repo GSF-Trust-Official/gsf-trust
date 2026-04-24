@@ -1222,16 +1222,15 @@ PRAGMA foreign_keys = ON;
 
 **1.3 DB helper layer**
 - [x] `lib/db.ts` — `getDb(env)`, `Env` interface
-- [ ] `lib/queries/users.ts` — `getUserByEmail`, `updateLastLogin`
+- [x] `lib/queries/users.ts` — `getUserByEmail`, `getUserById`, `updateLastLogin`
 - [x] `lib/audit.ts` — `auditStatement()` helper
 
 **1.4 Auth**
-- [x] `lib/auth.ts` — `hashPassword`, `verifyPassword`, `signToken`, `verifyToken`
+- [x] `lib/auth.ts` — `hashPassword`, `verifyPassword`, `signToken`, `verifyToken`, `canWrite`, `isAdmin`, `isMember`, `getUserFromRequest`
 - [x] `lib/email.ts` — Resend wrapper
 - [x] `lib/utils.ts` — `cn()`, `formatINR()`, `formatDate()`, `formatMonthYear()`
 - [x] `middleware.ts` — JWT guard on protected paths
-- [ ] Add `canWrite(role)` and `isAdmin(role)` helpers to `lib/auth.ts` (see §7.4)
-- [ ] Zod schema for login input
+- [x] Zod schema for login input (`lib/validators/auth.ts`)
 - [ ] `app/api/auth/login/route.ts` — validates, checks password, sets cookie, logs audit
 - [ ] `app/api/auth/logout/route.ts` — clears cookie, logs audit
 - [ ] Login rate limiting (simple in-memory or D1-backed counter)
