@@ -1,6 +1,6 @@
 import { NextResponse } from "next/server";
 import { getCloudflareContext } from "@opennextjs/cloudflare";
-import { getUserFromRequest, hashPassword, canWrite, isAdmin } from "@/lib/auth";
+import { getUserFromRequest, hashPassword, canWrite } from "@/lib/auth";
 import { auditStatement } from "@/lib/audit";
 import { ChangePasswordSchema } from "@/lib/validators/auth";
 
@@ -9,7 +9,9 @@ const MIN_LENGTH_BASE = 10;
 
 export async function POST(req: Request): Promise<NextResponse> {
   try {
-    const user = await getUserFromRequest(req);
+    const { env } = getCloudflareContext();
+    const db = env.DB;
+    const user = await getUserFromRequest(req, db);
     if (!user) {
       return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
     }
@@ -24,10 +26,9 @@ export async function POST(req: Request): Promise<NextResponse> {
     }
 
     const { password } = parsed.data;
-    const minLength =
-      isAdmin(user.role) || canWrite(user.role)
-        ? MIN_LENGTH_PRIVILEGED
-        : MIN_LENGTH_BASE;
+    const minLength = canWrite(user.role)
+      ? MIN_LENGTH_PRIVILEGED
+      : MIN_LENGTH_BASE;
 
     if (password.length < minLength) {
       return NextResponse.json(
@@ -38,15 +39,16 @@ export async function POST(req: Request): Promise<NextResponse> {
       );
     }
 
-    const { env } = getCloudflareContext();
-    const db = env.DB;
     const hash = await hashPassword(password);
 
+    // Increment token_version so existing sessions on other devices are revoked.
     await db.batch([
       db
         .prepare(
           `UPDATE users
-           SET password_hash = ?, must_change_password = 0, updated_at = datetime('now')
+           SET password_hash = ?, must_change_password = 0,
+               token_version = token_version + 1,
+               updated_at = datetime('now')
            WHERE id = ?`
         )
         .bind(hash, user.sub),

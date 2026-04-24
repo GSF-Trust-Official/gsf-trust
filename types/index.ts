@@ -11,6 +11,7 @@ export interface User {
   role: UserRole;
   is_active: 0 | 1;
   must_change_password: 0 | 1;
+  token_version: number;
   two_factor_secret: string | null;
   created_at: string;
   updated_at: string;
@@ -168,6 +169,7 @@ export interface JwtPayload {
   sub: string;
   role: UserRole;
   name: string;
+  tokenVersion: number;
   exp: number;
 }
 

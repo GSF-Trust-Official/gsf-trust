@@ -3,7 +3,6 @@
 import { useState } from "react";
 import { useRouter } from "next/navigation";
 import { LogOut } from "lucide-react";
-import { toast } from "sonner";
 import { cn } from "@/lib/utils";
 
 export function SignOutButton({ className }: { className?: string }) {
