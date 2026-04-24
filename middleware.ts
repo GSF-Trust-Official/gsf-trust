@@ -16,7 +16,13 @@ const PROTECTED_PATHS = [
   "/api",
 ];
 
-const PUBLIC_API = ["/api/auth/login", "/api/auth/forgot-password"];
+const PUBLIC_API = [
+  "/api/auth/login",
+  "/api/auth/logout",
+  "/api/auth/register",
+  "/api/auth/forgot-password",
+  "/api/auth/set-password",
+];
 
 export async function middleware(req: NextRequest): Promise<NextResponse> {
   const { pathname } = req.nextUrl;
@@ -46,5 +52,7 @@ function redirectToLogin(req: NextRequest): NextResponse {
 }
 
 export const config = {
-  matcher: ["/((?!_next/static|_next/image|favicon.ico|login).*)"],
+  matcher: [
+    "/((?!_next/static|_next/image|favicon.ico|login|register|set-password).*)",
+  ],
 };
