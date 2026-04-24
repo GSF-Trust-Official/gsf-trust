@@ -13,5 +13,8 @@ binding = "DB"
 database_name = "gsf-accounts-db"
 database_id = "f8bf6798-a34b-4e2f-b1fe-4a1b1ee0cea7"
 
+[vars]
+NODE_ENV = "production"
+
 # File exports (PDF/Excel) and backups are stored in Google Drive.
 # R2 is not used in this project.

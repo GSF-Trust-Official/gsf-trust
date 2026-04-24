@@ -9,13 +9,6 @@ import {
   CreditCard,
   BookOpen,
   MoreHorizontal,
-  Landmark,
-  Gift,
-  HeartHandshake,
-  GraduationCap,
-  BarChart3,
-  Settings,
-  LogOut,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import {
@@ -56,7 +49,7 @@ export function BottomNav({ role, name }: BottomNavProps) {
               key={tab.href}
               href={tab.href}
               className={cn(
-                "flex-1 flex flex-col items-center justify-center py-2 min-h-[56px] text-xs font-medium transition-colors",
+                "flex-1 flex flex-col items-center justify-center py-2 min-h-14 text-xs font-medium transition-colors",
                 isActive
                   ? "text-primary"
                   : "text-on-surface-variant"
@@ -70,7 +63,7 @@ export function BottomNav({ role, name }: BottomNavProps) {
 
         <Sheet open={open} onOpenChange={setOpen}>
           <SheetTrigger
-            className="flex-1 flex flex-col items-center justify-center py-2 min-h-[56px] text-xs font-medium text-on-surface-variant bg-transparent border-none cursor-pointer"
+            className="flex-1 flex flex-col items-center justify-center py-2 min-h-14 text-xs font-medium text-on-surface-variant bg-transparent border-none cursor-pointer"
             render={<button />}
           >
             <MoreHorizontal className="h-5 w-5 mb-0.5" />
