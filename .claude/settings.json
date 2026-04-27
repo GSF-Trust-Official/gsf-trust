@@ -10,7 +10,12 @@
       "Bash(wrangler secret *)",
       "Bash(wrangler versions *)",
       "Bash(node -e \"const p=require\\('./package.json'\\); console.log\\(JSON.stringify\\(p.scripts, null, 2\\)\\)\")",
-      "Bash(npx @opennextjs/cloudflare build)"
+      "Bash(npx @opennextjs/cloudflare build)",
+      "Bash(git commit -m 'docs: mark Phase 2 complete in CLAUDE.md *)"
+    ],
+    "additionalDirectories": [
+      "c:\\Users\\Muhammed suhaib\\Documents\\Everything\\GSF\\gsf-trust\\app\\api\\members",
+      "c:\\Users\\Muhammed suhaib\\Documents\\Everything\\GSF\\gsf-trust\\app\\(app)\\members"
     ]
   }
 }
