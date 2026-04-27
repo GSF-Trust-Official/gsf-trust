@@ -86,12 +86,15 @@ export async function getUserFromRequest(
     const payload = await verifyToken(token);
     const row = await db
       .prepare(
-        "SELECT token_version FROM users WHERE id = ? AND is_active = 1"
+        "SELECT token_version, must_change_password FROM users WHERE id = ? AND is_active = 1"
       )
       .bind(payload.sub)
-      .first<{ token_version: number }>();
+      .first<{ token_version: number; must_change_password: 0 | 1 }>();
     if (!row || row.token_version !== payload.tokenVersion) return null;
-    return payload;
+    return {
+      ...payload,
+      mustChangePassword: row.must_change_password === 1,
+    };
   } catch {
     return null;
   }

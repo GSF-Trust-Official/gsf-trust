@@ -13,19 +13,22 @@ export default async function ChangePasswordPage() {
   const user = await getSessionUser();
   if (!user) redirect("/login");
 
+  const isForcedChange = user.mustChangePassword;
+
   return (
     <Card className="w-full max-w-sm shadow-md">
       <CardHeader className="text-center space-y-1">
         <CardTitle className="font-headline text-2xl text-on-surface">
-          Set your password
+          {isForcedChange ? "Set your password" : "Change password"}
         </CardTitle>
         <CardDescription>
-          Choose a strong password before continuing. You won&apos;t be asked
-          again.
+          {isForcedChange
+            ? "Choose a strong password before continuing. You won't be asked again."
+            : "Enter your current password, then choose a new one."}
         </CardDescription>
       </CardHeader>
       <CardContent>
-        <ChangePasswordForm />
+        <ChangePasswordForm isForcedChange={isForcedChange} />
       </CardContent>
     </Card>
   );

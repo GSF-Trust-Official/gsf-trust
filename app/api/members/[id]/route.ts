@@ -1,6 +1,6 @@
 import { NextResponse } from "next/server";
 import { getCloudflareContext } from "@opennextjs/cloudflare";
-import { getUserFromRequest, canWrite, isAdmin } from "@/lib/auth";
+import { getUserFromRequest, canWrite, isAdmin, isMember } from "@/lib/auth";
 import { UpdateMemberSchema } from "@/lib/validators/member";
 import {
   getMemberById,
@@ -19,6 +19,16 @@ export async function GET(
     const user = await getUserFromRequest(req, db);
     if (!user) {
       return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+    }
+    if (user.mustChangePassword) {
+      return NextResponse.json(
+        { error: "Password change required", code: "MUST_CHANGE_PASSWORD" },
+        { status: 403 }
+      );
+    }
+    // Member role uses /api/me/* for row-level self-service only.
+    if (isMember(user.role)) {
+      return NextResponse.json({ error: "Forbidden" }, { status: 403 });
     }
 
     const { id } = await params;
@@ -48,6 +58,12 @@ export async function PATCH(
     const user = await getUserFromRequest(req, db);
     if (!user) {
       return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+    }
+    if (user.mustChangePassword) {
+      return NextResponse.json(
+        { error: "Password change required", code: "MUST_CHANGE_PASSWORD" },
+        { status: 403 }
+      );
     }
     if (!canWrite(user.role)) {
       return NextResponse.json({ error: "Forbidden" }, { status: 403 });
@@ -112,6 +128,12 @@ export async function DELETE(
     const user = await getUserFromRequest(req, db);
     if (!user) {
       return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+    }
+    if (user.mustChangePassword) {
+      return NextResponse.json(
+        { error: "Password change required", code: "MUST_CHANGE_PASSWORD" },
+        { status: 403 }
+      );
     }
     if (!isAdmin(user.role)) {
       return NextResponse.json({ error: "Forbidden" }, { status: 403 });

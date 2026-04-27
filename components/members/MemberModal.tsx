@@ -2,7 +2,7 @@
 
 import * as React from "react";
 import { useEffect, useState } from "react";
-import { useForm } from "react-hook-form";
+import { useForm, useWatch } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { toast } from "sonner";
 import { z } from "zod";
@@ -63,7 +63,7 @@ export function MemberModal({
   const {
     register,
     handleSubmit,
-    watch,
+    control,
     reset,
     formState: { errors },
   } = useForm<MemberFormValues>({
@@ -71,7 +71,7 @@ export function MemberModal({
     defaultValues: getDefaults(member, defaultCode),
   });
 
-  const isBod = watch("is_bod");
+  const isBod = useWatch({ control, name: "is_bod" });
 
   useEffect(() => {
     reset(getDefaults(member, defaultCode));

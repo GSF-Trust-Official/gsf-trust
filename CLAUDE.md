@@ -1296,9 +1296,9 @@ PRAGMA foreign_keys = ON;
 - [x] `lib/validators/member.ts` — CreateMemberSchema, UpdateMemberSchema (z.preprocess for nullable optionals); separate MemberFormSchema in modal component to avoid zodResolver inference issues
 
 **2.3 API routes**
-- [x] `GET /api/members` — all members, any authenticated role
+- [x] `GET /api/members` — all members for admin/editor/viewer; member role blocked pending row-level `/api/me/*`
 - [x] `POST /api/members` — create; requires canWrite; code-uniqueness check
-- [x] `GET /api/members/[id]` — detail, any authenticated role
+- [x] `GET /api/members/[id]` — detail for admin/editor/viewer; member role blocked pending row-level `/api/me/*`
 - [x] `PATCH /api/members/[id]` — update; requires canWrite; code-uniqueness check; is_bod mapped boolean→0|1
 - [x] `DELETE /api/members/[id]` — soft-deactivate (status=inactive); requires isAdmin
 
