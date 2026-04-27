@@ -5,9 +5,9 @@ import {
   hashPassword,
   verifyPassword,
   signToken,
-  canWrite,
   COOKIE_NAME,
 } from "@/lib/auth";
+import { canWrite } from "@/lib/roles";
 import { auditStatement } from "@/lib/audit";
 import { ChangePasswordSchema } from "@/lib/validators/auth";
 

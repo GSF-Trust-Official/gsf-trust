@@ -1,7 +1,7 @@
 import { redirect } from "next/navigation";
 import { getCloudflareContext } from "@opennextjs/cloudflare";
 import { getSessionUser } from "@/lib/session";
-import { isMember } from "@/lib/auth";
+import { isMember } from "@/lib/roles";
 import { getAllMembers } from "@/lib/queries/members";
 import { MembersClient } from "@/components/members/MembersClient";
 
