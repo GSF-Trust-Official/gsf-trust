@@ -1,6 +1,7 @@
 "use client";
 
 import { useMemo, useState } from "react";
+import { useRouter } from "next/navigation";
 import {
   CalendarDays,
   CirclePlus,
@@ -23,8 +24,8 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 
 interface QuickActionsProps {
-  /** Only admin and editor see this action. */
   canWrite: boolean;
+  members: Array<{ id: string; code: string; name: string; email: string | null }>;
 }
 
 type TransactionType = "subscription" | "donation" | "expense";
@@ -40,18 +41,8 @@ const TRANSACTION_TYPES: {
 ];
 
 const MONTHS = [
-  "Jan",
-  "Feb",
-  "Mar",
-  "Apr",
-  "May",
-  "Jun",
-  "Jul",
-  "Aug",
-  "Sep",
-  "Oct",
-  "Nov",
-  "Dec",
+  "Jan", "Feb", "Mar", "Apr", "May", "Jun",
+  "Jul", "Aug", "Sep", "Oct", "Nov", "Dec",
 ];
 
 const fieldClass =
@@ -61,18 +52,64 @@ const selectClass = cn(
   "w-full rounded-lg outline-none focus-visible:border-ring focus-visible:ring-3 focus-visible:ring-ring/50"
 );
 
-export function QuickActions({ canWrite }: QuickActionsProps) {
+export function QuickActions({ canWrite, members }: QuickActionsProps) {
+  const router = useRouter();
   const [open, setOpen] = useState(false);
   const [type, setType] = useState<TransactionType>("subscription");
+  const [submitting, setSubmitting] = useState(false);
 
   const today = useMemo(() => new Date().toISOString().slice(0, 10), []);
   const submitLabel = `Log ${labelFor(type)}`;
 
   if (!canWrite) return null;
 
-  function handleSubmit(event: React.FormEvent<HTMLFormElement>) {
+  async function handleSubmit(event: React.FormEvent<HTMLFormElement>) {
     event.preventDefault();
-    toast.info(`${submitLabel} will connect to the ledger workflow in its phase.`);
+    const form = event.currentTarget;
+
+    if (type === "subscription") {
+      const fd = new FormData(form);
+      const body = {
+        member_id: fd.get("member_id") as string,
+        month:     parseInt(fd.get("month") as string, 10),
+        year:      parseInt(fd.get("year") as string, 10),
+        amount:    parseFloat(fd.get("amount") as string),
+        paid_date: fd.get("paid_date") as string,
+        mode:      fd.get("mode") as string,
+        reference: (fd.get("reference") as string) || null,
+        notes:     null,
+      };
+
+      if (!body.member_id) {
+        toast.error("Please select a member");
+        return;
+      }
+
+      setSubmitting(true);
+      try {
+        const res = await fetch("/api/subscriptions", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify(body),
+        });
+        const data = (await res.json()) as { error?: string };
+        if (!res.ok) {
+          toast.error(data.error ?? "Failed to log subscription");
+          return;
+        }
+        toast.success("Subscription logged successfully");
+        setOpen(false);
+        router.refresh();
+      } catch {
+        toast.error("Something went wrong");
+      } finally {
+        setSubmitting(false);
+      }
+      return;
+    }
+
+    // Donations and expenses are placeholder until Phase 5/6
+    toast.info(`${submitLabel} will be wired up in its phase.`);
     setOpen(false);
   }
 
@@ -125,7 +162,9 @@ export function QuickActions({ canWrite }: QuickActionsProps) {
               })}
             </div>
 
-            {type === "subscription" && <SubscriptionFields today={today} />}
+            {type === "subscription" && (
+              <SubscriptionFields today={today} members={members} />
+            )}
             {type === "donation" && <DonationFields today={today} />}
             {type === "expense" && <ExpenseFields today={today} />}
 
@@ -135,10 +174,16 @@ export function QuickActions({ canWrite }: QuickActionsProps) {
                 variant="ghost"
                 size="lg"
                 onClick={() => setOpen(false)}
+                disabled={submitting}
               >
                 Cancel
               </Button>
-              <Button type="submit" size="lg" className="h-11 gap-2 px-4">
+              <Button
+                type="submit"
+                size="lg"
+                className="h-11 gap-2 px-4"
+                disabled={submitting}
+              >
                 {type === "expense" ? (
                   <ReceiptText className="size-4" />
                 ) : type === "donation" ? (
@@ -146,7 +191,7 @@ export function QuickActions({ canWrite }: QuickActionsProps) {
                 ) : (
                   <Save className="size-4" />
                 )}
-                {submitLabel}
+                {submitting ? "Saving..." : submitLabel}
               </Button>
             </div>
           </form>
@@ -156,27 +201,48 @@ export function QuickActions({ canWrite }: QuickActionsProps) {
   );
 }
 
-function SubscriptionFields({ today }: { today: string }) {
+function SubscriptionFields({
+  today,
+  members,
+}: {
+  today: string;
+  members: Array<{ id: string; code: string; name: string }>;
+}) {
   return (
     <div className="space-y-4">
       <Field label="Member *">
-        <select className={selectClass} defaultValue="">
+        <select name="member_id" className={selectClass} defaultValue="">
           <option value="" disabled>
             Select member...
           </option>
+          {members.map((m) => (
+            <option key={m.id} value={m.id}>
+              {m.code} — {m.name}
+            </option>
+          ))}
         </select>
       </Field>
 
       <div className="grid grid-cols-2 gap-3">
         <Field label="Month *">
-          <select className={selectClass} defaultValue={MONTHS[new Date().getMonth()]}>
-            {MONTHS.map((month) => (
-              <option key={month}>{month}</option>
+          <select
+            name="month"
+            className={selectClass}
+            defaultValue={String(new Date().getMonth() + 1)}
+          >
+            {MONTHS.map((month, i) => (
+              <option key={month} value={String(i + 1)}>
+                {month}
+              </option>
             ))}
           </select>
         </Field>
         <Field label="Year *">
-          <select className={selectClass} defaultValue={String(new Date().getFullYear())}>
+          <select
+            name="year"
+            className={selectClass}
+            defaultValue={String(new Date().getFullYear())}
+          >
             {[2026, 2025, 2024, 2023].map((year) => (
               <option key={year}>{year}</option>
             ))}
@@ -186,15 +252,26 @@ function SubscriptionFields({ today }: { today: string }) {
 
       <div className="grid grid-cols-2 gap-3">
         <Field label="Amount (INR) *">
-          <Input className={fieldClass} type="number" min="0" defaultValue="300" />
+          <Input
+            name="amount"
+            className={fieldClass}
+            type="number"
+            min="0"
+            defaultValue="300"
+          />
         </Field>
         <Field label="Payment Date *">
-          <Input className={fieldClass} type="date" defaultValue={today} />
+          <Input
+            name="paid_date"
+            className={fieldClass}
+            type="date"
+            defaultValue={today}
+          />
         </Field>
       </div>
 
       <Field label="Payment Mode *">
-        <select className={selectClass} defaultValue="upi">
+        <select name="mode" className={selectClass} defaultValue="upi">
           <option value="upi">UPI</option>
           <option value="bank">Bank</option>
           <option value="cash">Cash</option>
@@ -202,7 +279,11 @@ function SubscriptionFields({ today }: { today: string }) {
       </Field>
 
       <Field label="Reference">
-        <Input className={fieldClass} placeholder="Transaction ID, cheque no..." />
+        <Input
+          name="reference"
+          className={fieldClass}
+          placeholder="Transaction ID, cheque no..."
+        />
       </Field>
     </div>
   );
@@ -307,7 +388,9 @@ function ExpenseFields({ today }: { today: string }) {
 
       {account === "interest" && (
         <p className="text-xs rounded-lg bg-warning-container px-3 py-2 text-[#4d3600]">
-          Use <strong>Bank Interest Received</strong> for deposits from the bank (positive amount). Use <strong>Distribution to Poor</strong> when disbursing interest funds (positive amount — the system records it as a debit).
+          Use <strong>Bank Interest Received</strong> for deposits from the bank (positive amount). Use{" "}
+          <strong>Distribution to Poor</strong> when disbursing interest funds (positive amount — the
+          system records it as a debit).
         </p>
       )}
       {account === "zakat" && (
@@ -320,7 +403,9 @@ function ExpenseFields({ today }: { today: string }) {
         <Field label="Category *">
           <select className={selectClass} defaultValue={categories[0].value}>
             {categories.map((c) => (
-              <option key={c.value} value={c.value}>{c.label}</option>
+              <option key={c.value} value={c.value}>
+                {c.label}
+              </option>
             ))}
           </select>
         </Field>
@@ -358,7 +443,7 @@ function Field({
       <Label>
         {label}
         {optional && (
-          <span className="font-normal text-on-surface-variant">(optional)</span>
+          <span className="font-normal text-on-surface-variant"> (optional)</span>
         )}
       </Label>
       {children}
