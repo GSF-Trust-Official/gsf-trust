@@ -1,5 +1,5 @@
 // TypeScript interfaces matching the D1 database schema exactly.
-// Keep in sync with cloudflare/migrations/ (latest: 002_update_user_roles.sql)
+// Keep in sync with cloudflare/migrations/ (latest: 005_add_interest_account.sql)
 
 export type UserRole = "admin" | "editor" | "viewer" | "member";
 
@@ -53,7 +53,7 @@ export interface Subscription {
 export interface LedgerEntry {
   id: string;
   date: string;
-  account: "general" | "zakat";
+  account: "general" | "zakat" | "interest";
   category: string;
   sub_category: string | null;
   member_id: string | null;
@@ -183,9 +183,10 @@ export interface SubscriptionMatrixRow {
 
 // Dashboard KPIs
 export interface DashboardKpis {
-  total_funds: number;
+  total_funds: number;        // general + zakat only — interest excluded (not Foundation's money)
   general_balance: number;
   zakat_balance: number;
+  interest_balance: number;  // undistributed bank interest awaiting distribution to the poor
   medical_pool: number;
   outstanding_dues: number;
 }

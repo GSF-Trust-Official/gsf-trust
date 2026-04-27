@@ -8,6 +8,7 @@ const PROTECTED_PATHS = [
   "/subscriptions",
   "/ledger",
   "/zakat",
+  "/interest",
   "/donations",
   "/medical",
   "/scholarship",
