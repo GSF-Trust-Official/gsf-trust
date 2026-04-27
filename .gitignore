@@ -49,3 +49,10 @@ yarn-error.log*
 # typescript
 *.tsbuildinfo
 next-env.d.ts
+
+# graphify — temp/cache files (never commit)
+.graphify_*
+graphify-out/cache/
+graphify-out/manifest.json
+graphify-out/.needs_update
+# graphify outputs worth keeping: graph.html, graph.json, GRAPH_REPORT.md, cost.json
