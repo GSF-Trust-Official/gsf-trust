@@ -63,8 +63,8 @@ export default async function DashboardPage() {
           label="Undistributed Interest"
           value={kpis.interest_balance}
           amountColor="text-warning"
-          bg="bg-warning-container/30"
           note="Awaiting distribution"
+          accent="border-l-4 border-l-[#8b6a00]"
           tooltip="Bank savings interest — haram, must be distributed to the poor"
         />
         <KpiTile

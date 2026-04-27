@@ -1,82 +1,373 @@
 "use client";
 
-import { useState } from "react";
+import { useMemo, useState } from "react";
+import {
+  CalendarDays,
+  CirclePlus,
+  HandHeart,
+  ReceiptText,
+  Save,
+  WalletCards,
+} from "lucide-react";
 import { toast } from "sonner";
-import { Sheet, SheetContent, SheetHeader, SheetTitle } from "@/components/ui/sheet";
+
+import { cn } from "@/lib/utils";
+import { Button } from "@/components/ui/button";
+import {
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+} from "@/components/ui/dialog";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
 
 interface QuickActionsProps {
-  /** Only admin and editor see these buttons. */
+  /** Only admin and editor see this action. */
   canWrite: boolean;
 }
 
-interface Action {
-  label: string;
-  phase: string;
-  icon: string;
-}
+type TransactionType = "subscription" | "donation" | "expense";
 
-const ACTIONS: Action[] = [
-  { label: "Log Subscription", phase: "Phase 4", icon: "📋" },
-  { label: "Log Donation",     phase: "Phase 6", icon: "🤲" },
-  { label: "Log Expense",      phase: "Phase 5", icon: "📝" },
+const TRANSACTION_TYPES: {
+  value: TransactionType;
+  label: string;
+  icon: React.ElementType;
+}[] = [
+  { value: "subscription", label: "Subscription", icon: CalendarDays },
+  { value: "donation", label: "Donation", icon: HandHeart },
+  { value: "expense", label: "Expense", icon: WalletCards },
 ];
 
+const MONTHS = [
+  "Jan",
+  "Feb",
+  "Mar",
+  "Apr",
+  "May",
+  "Jun",
+  "Jul",
+  "Aug",
+  "Sep",
+  "Oct",
+  "Nov",
+  "Dec",
+];
+
+const fieldClass =
+  "h-10 border-0 bg-surface-container px-3 text-sm shadow-none focus-visible:bg-white";
+const selectClass = cn(
+  fieldClass,
+  "w-full rounded-lg outline-none focus-visible:border-ring focus-visible:ring-3 focus-visible:ring-ring/50"
+);
+
 export function QuickActions({ canWrite }: QuickActionsProps) {
-  const [fabOpen, setFabOpen] = useState(false);
+  const [open, setOpen] = useState(false);
+  const [type, setType] = useState<TransactionType>("subscription");
+
+  const today = useMemo(() => new Date().toISOString().slice(0, 10), []);
+  const submitLabel = `Log ${labelFor(type)}`;
 
   if (!canWrite) return null;
 
-  const handleAction = (action: Action) => {
-    setFabOpen(false);
-    toast.info(`${action.label} modal coming in ${action.phase}.`);
-  };
+  function handleSubmit(event: React.FormEvent<HTMLFormElement>) {
+    event.preventDefault();
+    toast.info(`${submitLabel} will connect to the ledger workflow in its phase.`);
+    setOpen(false);
+  }
 
   return (
     <>
-      {/* Desktop: inline buttons */}
-      <div className="hidden xl:flex items-center gap-2">
-        {ACTIONS.map((action) => (
-          <button
-            key={action.label}
-            onClick={() => handleAction(action)}
-            className="inline-flex items-center gap-1.5 px-3 py-2 rounded-lg text-sm font-medium bg-primary text-white hover:bg-primary-container transition-colors"
-          >
-            <span>{action.icon}</span>
-            {action.label}
-          </button>
-        ))}
-      </div>
+      <Button
+        size="lg"
+        onClick={() => setOpen(true)}
+        className="hidden sm:inline-flex h-11 gap-2 px-4 bg-primary text-white hover:bg-primary-container"
+      >
+        <CirclePlus className="size-5" />
+        Log Transaction
+      </Button>
 
-      {/* Mobile: FAB + bottom sheet */}
-      <div className="xl:hidden">
-        <button
-          onClick={() => setFabOpen(true)}
-          aria-label="Quick actions"
-          className="fixed bottom-24 right-4 z-40 w-14 h-14 rounded-full bg-primary text-white shadow-lg flex items-center justify-center text-2xl hover:bg-primary-container transition-colors"
-        >
-          +
-        </button>
+      <Button
+        size="icon-lg"
+        onClick={() => setOpen(true)}
+        aria-label="Log transaction"
+        className="sm:hidden fixed bottom-24 right-4 z-40 size-14 rounded-full bg-primary text-white shadow-lg hover:bg-primary-container"
+      >
+        <CirclePlus className="size-6" />
+      </Button>
 
-        <Sheet open={fabOpen} onOpenChange={setFabOpen}>
-          <SheetContent side="bottom" className="rounded-t-2xl pb-8">
-            <SheetHeader className="mb-4">
-              <SheetTitle>Quick Actions</SheetTitle>
-            </SheetHeader>
-            <div className="flex flex-col gap-2">
-              {ACTIONS.map((action) => (
-                <button
-                  key={action.label}
-                  onClick={() => handleAction(action)}
-                  className="flex items-center gap-3 w-full px-4 py-3 rounded-xl text-left text-sm font-medium bg-surface-low hover:bg-surface-container transition-colors text-on-surface"
-                >
-                  <span className="text-xl">{action.icon}</span>
-                  {action.label}
-                </button>
-              ))}
+      <Dialog open={open} onOpenChange={setOpen}>
+        <DialogContent className="max-w-xl rounded-xl" showCloseButton>
+          <DialogHeader className="p-5 pb-3">
+            <DialogTitle>Log Transaction</DialogTitle>
+          </DialogHeader>
+
+          <form onSubmit={handleSubmit} className="space-y-5 px-5 pb-5">
+            <div className="grid grid-cols-3 overflow-hidden rounded-lg bg-surface-container p-1">
+              {TRANSACTION_TYPES.map((item) => {
+                const Icon = item.icon;
+                const active = item.value === type;
+                return (
+                  <button
+                    key={item.value}
+                    type="button"
+                    onClick={() => setType(item.value)}
+                    className={cn(
+                      "flex h-10 items-center justify-center gap-2 rounded-md text-sm font-medium text-on-surface-variant transition-colors",
+                      active && "bg-white text-on-surface shadow-sm"
+                    )}
+                    aria-pressed={active}
+                  >
+                    <Icon className="size-4" />
+                    <span className="hidden min-[420px]:inline">{item.label}</span>
+                  </button>
+                );
+              })}
             </div>
-          </SheetContent>
-        </Sheet>
-      </div>
+
+            {type === "subscription" && <SubscriptionFields today={today} />}
+            {type === "donation" && <DonationFields today={today} />}
+            {type === "expense" && <ExpenseFields today={today} />}
+
+            <div className="flex items-center justify-end gap-3 pt-1">
+              <Button
+                type="button"
+                variant="ghost"
+                size="lg"
+                onClick={() => setOpen(false)}
+              >
+                Cancel
+              </Button>
+              <Button type="submit" size="lg" className="h-11 gap-2 px-4">
+                {type === "expense" ? (
+                  <ReceiptText className="size-4" />
+                ) : type === "donation" ? (
+                  <HandHeart className="size-4" />
+                ) : (
+                  <Save className="size-4" />
+                )}
+                {submitLabel}
+              </Button>
+            </div>
+          </form>
+        </DialogContent>
+      </Dialog>
     </>
   );
+}
+
+function SubscriptionFields({ today }: { today: string }) {
+  return (
+    <div className="space-y-4">
+      <Field label="Member *">
+        <select className={selectClass} defaultValue="">
+          <option value="" disabled>
+            Select member...
+          </option>
+        </select>
+      </Field>
+
+      <div className="grid grid-cols-2 gap-3">
+        <Field label="Month *">
+          <select className={selectClass} defaultValue={MONTHS[new Date().getMonth()]}>
+            {MONTHS.map((month) => (
+              <option key={month}>{month}</option>
+            ))}
+          </select>
+        </Field>
+        <Field label="Year *">
+          <select className={selectClass} defaultValue={String(new Date().getFullYear())}>
+            {[2026, 2025, 2024, 2023].map((year) => (
+              <option key={year}>{year}</option>
+            ))}
+          </select>
+        </Field>
+      </div>
+
+      <div className="grid grid-cols-2 gap-3">
+        <Field label="Amount (INR) *">
+          <Input className={fieldClass} type="number" min="0" defaultValue="300" />
+        </Field>
+        <Field label="Payment Date *">
+          <Input className={fieldClass} type="date" defaultValue={today} />
+        </Field>
+      </div>
+
+      <Field label="Payment Mode *">
+        <select className={selectClass} defaultValue="upi">
+          <option value="upi">UPI</option>
+          <option value="bank">Bank</option>
+          <option value="cash">Cash</option>
+        </select>
+      </Field>
+
+      <Field label="Reference">
+        <Input className={fieldClass} placeholder="Transaction ID, cheque no..." />
+      </Field>
+    </div>
+  );
+}
+
+function DonationFields({ today }: { today: string }) {
+  const [external, setExternal] = useState(false);
+
+  return (
+    <div className="space-y-4">
+      <div className="space-y-1.5">
+        <div className="flex items-center justify-between">
+          <Label htmlFor="donor">{external ? "Donor Name *" : "Donor"}</Label>
+          <button
+            type="button"
+            onClick={() => setExternal((v) => !v)}
+            className="text-xs font-medium text-primary hover:underline"
+          >
+            {external ? "Select member" : "External donor?"}
+          </button>
+        </div>
+        {external ? (
+          <Input id="donor" className={fieldClass} placeholder="Enter donor name" />
+        ) : (
+          <select id="donor" className={selectClass} defaultValue="">
+            <option value="" disabled>
+              Select member...
+            </option>
+          </select>
+        )}
+      </div>
+
+      <Field label="Donation Type *">
+        <SegmentedOptions options={["Hadiya", "Zakat", "Other"]} defaultValue="Hadiya" />
+      </Field>
+
+      <div className="grid grid-cols-2 gap-3">
+        <Field label="Category *">
+          <select className={selectClass} defaultValue="general">
+            <option value="general">General</option>
+            <option value="medical">Medical</option>
+            <option value="scholarship">Scholarship</option>
+            <option value="emergency">Emergency</option>
+          </select>
+        </Field>
+        <Field label="Amount (INR) *">
+          <Input className={fieldClass} type="number" min="0" defaultValue="0" />
+        </Field>
+      </div>
+
+      <div className="grid grid-cols-2 gap-3">
+        <Field label="Date *">
+          <Input className={fieldClass} type="date" defaultValue={today} />
+        </Field>
+        <Field label="Mode *">
+          <select className={selectClass} defaultValue="upi">
+            <option value="upi">UPI</option>
+            <option value="bank">Bank</option>
+            <option value="cash">Cash</option>
+          </select>
+        </Field>
+      </div>
+
+      <Field label="Reference">
+        <Input className={fieldClass} placeholder="Transaction ID..." />
+      </Field>
+    </div>
+  );
+}
+
+function ExpenseFields({ today }: { today: string }) {
+  return (
+    <div className="space-y-4">
+      <div className="grid grid-cols-2 gap-3">
+        <Field label="Account *">
+          <select className={selectClass} defaultValue="general">
+            <option value="general">General</option>
+            <option value="zakat">Zakat</option>
+            <option value="interest">Interest</option>
+          </select>
+        </Field>
+        <Field label="Amount (INR) *">
+          <Input className={fieldClass} type="number" min="0" defaultValue="0" />
+        </Field>
+      </div>
+
+      <div className="grid grid-cols-2 gap-3">
+        <Field label="Category *">
+          <select className={selectClass} defaultValue="medical">
+            <option value="medical">Medical</option>
+            <option value="scholarship">Scholarship</option>
+            <option value="admin">Admin</option>
+            <option value="distribution">Distribution</option>
+          </select>
+        </Field>
+        <Field label="Date *">
+          <Input className={fieldClass} type="date" defaultValue={today} />
+        </Field>
+      </div>
+
+      <Field label="Description *">
+        <Input className={fieldClass} placeholder="What was this expense for?" />
+      </Field>
+
+      <Field label="Reference">
+        <Input className={fieldClass} placeholder="Bill no, transaction ID..." />
+      </Field>
+    </div>
+  );
+}
+
+function Field({
+  label,
+  children,
+}: {
+  label: string;
+  children: React.ReactNode;
+}) {
+  const optional = label.endsWith("Reference");
+  return (
+    <div className="space-y-1.5">
+      <Label>
+        {label}
+        {optional && (
+          <span className="font-normal text-on-surface-variant">(optional)</span>
+        )}
+      </Label>
+      {children}
+    </div>
+  );
+}
+
+function SegmentedOptions({
+  options,
+  defaultValue,
+}: {
+  options: string[];
+  defaultValue: string;
+}) {
+  const [selected, setSelected] = useState(defaultValue);
+
+  return (
+    <div className="grid grid-cols-3 gap-2">
+      {options.map((option) => {
+        const active = option === selected;
+        return (
+          <button
+            key={option}
+            type="button"
+            onClick={() => setSelected(option)}
+            className={cn(
+              "h-9 rounded-lg border border-outline-variant bg-surface-container text-sm font-medium text-on-surface-variant transition-colors",
+              active && "border-primary bg-primary-fixed text-primary"
+            )}
+          >
+            {option}
+          </button>
+        );
+      })}
+    </div>
+  );
+}
+
+function labelFor(type: TransactionType): string {
+  if (type === "subscription") return "Subscription";
+  if (type === "donation") return "Donation";
+  return "Expense";
 }
