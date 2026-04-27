@@ -1,10 +1,15 @@
-export default function MembersPage() {
-  return (
-    <div>
-      <h1 className="font-headline text-2xl font-bold text-on-surface mb-6">
-        Members
-      </h1>
-      <p className="text-on-surface-variant">Coming in a future phase.</p>
-    </div>
-  );
+import { redirect } from "next/navigation";
+import { getCloudflareContext } from "@opennextjs/cloudflare";
+import { getSessionUser } from "@/lib/session";
+import { getAllMembers } from "@/lib/queries/members";
+import { MembersClient } from "@/components/members/MembersClient";
+
+export default async function MembersPage() {
+  const user = await getSessionUser();
+  if (!user) redirect("/login");
+
+  const { env } = getCloudflareContext();
+  const members = await getAllMembers(env.DB);
+
+  return <MembersClient members={members} role={user.role} />;
 }
