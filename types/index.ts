@@ -170,6 +170,7 @@ export interface JwtPayload {
   role: UserRole;
   name: string;
   tokenVersion: number;
+  mustChangePassword: boolean;
   exp: number;
 }
 

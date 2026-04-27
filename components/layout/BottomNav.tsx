@@ -3,6 +3,7 @@
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { useState } from "react";
+import React from "react";
 import {
   LayoutDashboard,
   Users,
@@ -22,11 +23,11 @@ import { NavLinks } from "@/components/layout/NavLinks";
 import { SignOutButton } from "@/components/layout/SignOutButton";
 import type { UserRole } from "@/types";
 
-const PRIMARY_TABS = [
+const PRIMARY_TABS: { href: string; label: string; icon: React.ElementType; roles?: UserRole[] }[] = [
   { href: "/dashboard", label: "Home", icon: LayoutDashboard },
-  { href: "/members", label: "Members", icon: Users },
-  { href: "/subscriptions", label: "Subs", icon: CreditCard },
-  { href: "/ledger", label: "Ledger", icon: BookOpen },
+  { href: "/members", label: "Members", icon: Users, roles: ["admin", "editor", "viewer"] },
+  { href: "/subscriptions", label: "Subs", icon: CreditCard, roles: ["admin", "editor", "viewer"] },
+  { href: "/ledger", label: "Ledger", icon: BookOpen, roles: ["admin", "editor", "viewer"] },
 ];
 
 interface BottomNavProps {
@@ -41,7 +42,7 @@ export function BottomNav({ role, name }: BottomNavProps) {
   return (
     <nav className="xl:hidden fixed bottom-0 inset-x-0 bg-white border-t border-outline-variant z-40 safe-area-inset-bottom">
       <div className="flex">
-        {PRIMARY_TABS.map((tab) => {
+        {PRIMARY_TABS.filter((tab) => !tab.roles || tab.roles.includes(role)).map((tab) => {
           const Icon = tab.icon;
           const isActive = pathname.startsWith(tab.href);
           return (

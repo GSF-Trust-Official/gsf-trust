@@ -4,6 +4,7 @@ import { getCloudflareContext } from "@opennextjs/cloudflare";
 import { ChevronLeftIcon } from "lucide-react";
 
 import { getSessionUser } from "@/lib/session";
+import { isMember } from "@/lib/auth";
 import { getMemberById } from "@/lib/queries/members";
 import { formatDate } from "@/lib/utils";
 import { MemberProfileClient } from "@/components/members/MemberProfileClient";
@@ -21,6 +22,7 @@ const KPI_PLACEHOLDERS = [
 export default async function MemberProfilePage({ params }: Props) {
   const user = await getSessionUser();
   if (!user) redirect("/login");
+  if (isMember(user.role)) redirect("/dashboard");
 
   const { id } = await params;
   const { env } = getCloudflareContext();

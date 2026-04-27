@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server";
 import type { NextRequest } from "next/server";
 import { jwtVerify } from "jose";
+import type { JwtPayload } from "@/types";
 
 const PROTECTED_PATHS = [
   "/dashboard",
@@ -26,6 +27,12 @@ const PUBLIC_API = [
   "/api/auth/set-password",
 ];
 
+// Paths that mustChangePassword users may still access.
+const CHANGE_PASSWORD_PATHS = [
+  "/change-password",
+  "/api/auth/change-password",
+];
+
 export async function middleware(req: NextRequest): Promise<NextResponse> {
   const { pathname } = req.nextUrl;
 
@@ -37,7 +44,26 @@ export async function middleware(req: NextRequest): Promise<NextResponse> {
 
   try {
     const secret = new TextEncoder().encode(process.env.JWT_SECRET);
-    await jwtVerify(token, secret);
+    const { payload } = await jwtVerify(token, secret);
+    const jwtPayload = payload as unknown as JwtPayload;
+
+    // Enforce server-side: users with mustChangePassword may only access
+    // the change-password flow until they set a new password.
+    if (
+      jwtPayload.mustChangePassword &&
+      !CHANGE_PASSWORD_PATHS.some((p) => pathname.startsWith(p))
+    ) {
+      if (pathname.startsWith("/api")) {
+        return NextResponse.json(
+          { error: "Password change required", code: "MUST_CHANGE_PASSWORD" },
+          { status: 403 }
+        );
+      }
+      const url = req.nextUrl.clone();
+      url.pathname = "/change-password";
+      return NextResponse.redirect(url);
+    }
+
     return NextResponse.next();
   } catch {
     return redirectToLogin(req);

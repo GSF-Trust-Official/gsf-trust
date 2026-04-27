@@ -11,6 +11,7 @@ export default async function AppLayout({
 }) {
   const user = await getSessionUser();
   if (!user) redirect("/login");
+  if (user.mustChangePassword) redirect("/change-password");
 
   return (
     <div className="flex min-h-screen bg-surface-low">

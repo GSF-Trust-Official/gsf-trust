@@ -26,14 +26,14 @@ interface NavItem {
 
 const NAV_ITEMS: NavItem[] = [
   { href: "/dashboard", label: "Dashboard", icon: LayoutDashboard },
-  { href: "/members", label: "Members", icon: Users },
-  { href: "/subscriptions", label: "Subscriptions", icon: CreditCard },
-  { href: "/ledger", label: "General Ledger", icon: BookOpen },
-  { href: "/zakat", label: "Zakat Account", icon: Landmark },
-  { href: "/donations", label: "Donations", icon: Gift },
-  { href: "/medical", label: "Medical Cases", icon: HeartHandshake },
-  { href: "/scholarship", label: "Scholarship", icon: GraduationCap },
-  { href: "/reports", label: "Reports", icon: BarChart3 },
+  { href: "/members", label: "Members", icon: Users, roles: ["admin", "editor", "viewer"] },
+  { href: "/subscriptions", label: "Subscriptions", icon: CreditCard, roles: ["admin", "editor", "viewer"] },
+  { href: "/ledger", label: "General Ledger", icon: BookOpen, roles: ["admin", "editor", "viewer"] },
+  { href: "/zakat", label: "Zakat Account", icon: Landmark, roles: ["admin", "editor", "viewer"] },
+  { href: "/donations", label: "Donations", icon: Gift, roles: ["admin", "editor", "viewer"] },
+  { href: "/medical", label: "Medical Cases", icon: HeartHandshake, roles: ["admin", "editor", "viewer"] },
+  { href: "/scholarship", label: "Scholarship", icon: GraduationCap, roles: ["admin", "editor", "viewer"] },
+  { href: "/reports", label: "Reports", icon: BarChart3, roles: ["admin", "editor", "viewer"] },
   { href: "/settings", label: "Settings", icon: Settings, roles: ["admin"] },
 ];
 
