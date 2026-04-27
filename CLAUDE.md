@@ -56,6 +56,7 @@ The `member` role is in the V1 schema and the self-service portal UI is built in
 4. **Server-side validation always.** Never trust the client. Role checks on every protected endpoint.
 5. **Reconciliation gate.** The app does not go live until the grand total from migration matches ₹4,57,900 to the rupee.
 6. **The Foundation owns everything.** All infrastructure accounts are in the Foundation's name. The developer is a collaborator, never an owner.
+7. **Interest (riba) is ring-fenced.** Bank savings account interest is haram in Islam. It must be tracked in a completely separate `interest` account — never merged with General or Zakat funds. Outflows from this account may only be distributions to the poor/charity (category: `Distribution to Poor`). Enforced server-side just like Zakat isolation. The dashboard shows the undistributed balance so the Treasurer always knows what to disburse.
 
 ### 0.4 Ownership model (critical)
 
@@ -271,7 +272,7 @@ One logical change per commit. Commit often.
 13 core modules, all functional end-to-end on mobile and desktop.
 
 1. **Authentication** — Email + password, JWT in httpOnly cookie, optional 2FA for treasurer, forgot password, self-registration form with Treasurer approval workflow
-2. **Dashboard** — KPI tiles (Total Funds, General, Zakat, Medical Pool, Outstanding Dues), Recharts (donation breakdown, expense allocation, collection rate), quick action buttons
+2. **Dashboard** — KPI tiles (Total Funds, General, Zakat, Undistributed Interest, Medical Pool, Outstanding Dues), Recharts (donation breakdown, expense allocation, collection rate), quick action buttons; interest balance does NOT add to Total Funds — shown separately as a reminder to disburse
 3. **Members Roster** — CRUD, search, filter (Active/Inactive/BOD), per-member profile with contribution history
 4. **Subscription Tracker** — P/D/N/A matrix, year selector, clickable cells, bulk mark-as-paid, arrears view
 5. **General Ledger** — chronological, filters (date/category/member/in-out), running balance via window function, export; admin and editor can edit entries, admin can soft-delete
@@ -283,6 +284,7 @@ One logical change per commit. Commit often.
 11. **Member Self-Service Portal** — Members log in and see only their own subscription history, donation history, outstanding dues, personal details, and downloadable PDF receipts; strict row-level security on every route
 12. **Payments Page** — visible to all roles; displays Foundation's banking details (stored in Settings) and a dynamically generated UPI QR code via `qrcode` package
 13. **Scholarship Announcements** — Treasurer/editor posts structured announcement (title, description, deadline, Google Drive poster link, Google Forms application link); all roles can view and access the form
+14. **Interest Account Tracker** — Bank savings interest credits are logged to the ring-fenced `interest` account (category: `Bank Interest`). When the Treasurer disburses the interest to the poor, a debit is logged (category: `Distribution to Poor`). The dashboard shows the current undistributed balance as a separate "Undistributed Interest" KPI tile. This account can never be merged into General or Zakat — rejected server-side if attempted.
 
 ---
 
@@ -445,6 +447,7 @@ CREATE TABLE IF NOT EXISTS users (
   role TEXT NOT NULL DEFAULT 'viewer' CHECK (role IN ('admin', 'editor', 'viewer', 'member')),
   is_active INTEGER NOT NULL DEFAULT 1,
   must_change_password INTEGER NOT NULL DEFAULT 0,
+  token_version INTEGER NOT NULL DEFAULT 0,   -- added via 004_add_token_version.sql
   two_factor_secret TEXT,
   created_at TEXT DEFAULT (datetime('now')),
   updated_at TEXT DEFAULT (datetime('now')),
@@ -490,7 +493,7 @@ CREATE TABLE IF NOT EXISTS subscriptions (
 CREATE TABLE IF NOT EXISTS ledger_entries (
   id TEXT PRIMARY KEY DEFAULT (lower(hex(randomblob(16)))),
   date TEXT NOT NULL,
-  account TEXT NOT NULL CHECK (account IN ('general','zakat')),
+  account TEXT NOT NULL CHECK (account IN ('general','zakat','interest')),  -- 'interest' added via 005_add_interest_account.sql
   category TEXT NOT NULL,
   sub_category TEXT,
   member_id TEXT REFERENCES members(id),
@@ -924,6 +927,18 @@ WHERE account = 'zakat' AND amount < 0 AND category != 'Scholarship' AND is_dele
 
 Add this as an automated test that runs on every deploy.
 
+### 8.6 Interest isolation test
+
+```sql
+-- Must return 0 — interest account outflows may only be distributions to the poor
+SELECT COUNT(*) FROM ledger_entries
+WHERE account = 'interest' AND amount < 0
+  AND category NOT IN ('Distribution to Poor', 'Charity Distribution')
+  AND is_deleted = 0;
+```
+
+Add this as an automated test that runs on every deploy. The interest balance should trend toward zero as the Treasurer makes periodic disbursements.
+
 ---
 
 ## 9. AUDIT LOG PATTERN
@@ -1193,6 +1208,8 @@ Write it as you build, not at the end. It should contain:
 - [x] Apply 002 locally and remotely
 - [x] `cloudflare/migrations/003_seed_treasurer.sql` — bcrypt hash committed (never plaintext); temp password `GSFAdmin2026!`, `must_change_password=1`
 - [x] Apply 003 locally; apply remotely after updating email to real Treasurer email
+- [x] `cloudflare/migrations/004_add_token_version.sql` — post-Phase-1 security fix; adds `token_version` to users for server-side session revocation
+- [x] `cloudflare/migrations/005_add_interest_account.sql` — adds `'interest'` to ledger_entries account CHECK for bank interest tracking
 
 **002_update_user_roles.sql pattern:**
 ```sql
@@ -1340,15 +1357,17 @@ PRAGMA foreign_keys = ON;
 **Sub-phases:**
 
 **3.1 Aggregation queries**
-- [ ] `lib/queries/dashboard.ts` — totalFunds, generalBalance, zakatBalance, medicalPool, outstandingDues, monthlyComparison
+- [ ] `lib/queries/dashboard.ts` — totalFunds, generalBalance, zakatBalance, interestBalance, medicalPool, outstandingDues, monthlyComparison
+- [ ] `totalFunds` = general + zakat only — interest excluded (it is not the Foundation's money to use)
 - [ ] All queries exclude `is_deleted = 1`
 
 **3.2 API**
 - [ ] `GET /api/dashboard` — returns all KPIs in one call
 
 **3.3 UI — KPI tiles**
-- [ ] 4 tiles on desktop (`lg:grid-cols-4`), 2 on tablet, 1 on mobile
+- [ ] 5 tiles on desktop (`lg:grid-cols-4` wrapping or `xl:grid-cols-5`), 2 on tablet, 1 on mobile
 - [ ] Each tile: label, big number, delta indicator
+- [ ] Interest tile uses amber/warning color to signal "needs action"; add a tooltip: "This is bank interest that must be distributed to the poor"
 - [ ] Loading skeletons (don't show "₹0" while loading)
 
 **3.4 UI — Charts**
@@ -1444,7 +1463,7 @@ PRAGMA foreign_keys = ON;
 
 ### PHASE 5 — Ledgers & Log Expense (4–5 days)
 
-**Goal:** General Ledger, Zakat Ledger, Log Expense modal. Zakat isolation enforced. Admin and editor can edit entries; admin can soft-delete. Running balance computed via window function.
+**Goal:** General Ledger, Zakat Ledger, Interest Ledger, Log Expense/Interest modals. Zakat and interest isolation enforced. Admin and editor can edit entries; admin can soft-delete. Running balance computed via window function.
 
 **Sub-phases:**
 
@@ -1458,6 +1477,8 @@ PRAGMA foreign_keys = ON;
 - [ ] `PATCH /api/ledger/[id]` — edit entry; admin and editor only; can change amount, date, description, category, reference, notes; **cannot** change account (General ↔ Zakat); audit logs before/after JSON
 - [ ] `DELETE /api/ledger/[id]` — soft delete; admin only; sets `is_deleted=1`, `deleted_at`, `deleted_by`; audit logs the delete
 - [ ] Server-side check: if account=zakat, category must be 'Scholarship'
+- [ ] Server-side check: if account=interest and amount > 0, category must be 'Bank Interest'; if amount < 0, category must be 'Distribution to Poor' or 'Charity Distribution'
+- [ ] `POST /api/ledger/interest` — dedicated endpoint for logging bank interest credits
 
 **5.3 UI — General Ledger**
 - [ ] `app/(app)/ledger/page.tsx`
@@ -1477,6 +1498,16 @@ PRAGMA foreign_keys = ON;
 - [ ] Red "Restricted Account" badge top
 - [ ] Balance displayed separately, never merged
 - [ ] Filter tabs: All / Inflows / Payouts
+
+**5.4b UI — Interest Ledger**
+- [ ] `app/(app)/interest/page.tsx`
+- [ ] Same layout as Zakat Ledger, filtered to account='interest'
+- [ ] Amber "Interest Payable to Poor" badge at top
+- [ ] Current balance KPI: amount awaiting distribution
+- [ ] Filter tabs: All / Received / Distributed
+- [ ] "Log Bank Interest" button (admin/editor) → opens Log Interest modal (credit entry)
+- [ ] "Distribute to Poor" button (admin/editor) → opens Log Distribution modal (debit entry)
+- [ ] Add `/interest` nav link in sidebar and mobile More sheet (Phase 5 — after route exists)
 
 **5.5 UI — Log Expense modal**
 - [ ] Fields: Account radio (General/Zakat), Category select, Description, Amount, Date, Reference, Notes
@@ -1514,8 +1545,14 @@ PRAGMA foreign_keys = ON;
 - [ ] Editing an entry cannot change its account (General or Zakat) — enforce server-side
 - [ ] Filters combine correctly (date + category + member)
 - [ ] Pagination works
-- [ ] **Isolation test:** run the Zakat isolation SQL from §8.5 — must return 0
-- [ ] Commit: `feat: general ledger, zakat ledger, log expense, edit and soft-delete`
+- [ ] Interest ledger shows only interest entries, never general or zakat
+- [ ] Dashboard "Undistributed Interest" KPI updates after logging bank interest
+- [ ] Interest balance does NOT add to Total Funds on dashboard
+- [ ] Distributing to poor correctly reduces the interest balance
+- [ ] Attempting to log interest outflow with a non-allowed category is rejected by the API
+- [ ] **Zakat isolation test:** run SQL from §8.5 — must return 0
+- [ ] **Interest isolation test:** run SQL from §8.6 — must return 0
+- [ ] Commit: `feat: general ledger, zakat ledger, interest ledger, log expense, edit and soft-delete`
 
 ---
 
