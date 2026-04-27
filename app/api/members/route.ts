@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server";
 import { getCloudflareContext } from "@opennextjs/cloudflare";
-import { getUserFromRequest, canWrite, isMember } from "@/lib/auth";
+import { getUserFromRequest } from "@/lib/auth";
+import { canWrite, isMember } from "@/lib/roles";
 import { CreateMemberSchema } from "@/lib/validators/member";
 import { getAllMembers, createMember } from "@/lib/queries/members";
 

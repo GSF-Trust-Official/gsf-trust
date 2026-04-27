@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server";
 import { getCloudflareContext } from "@opennextjs/cloudflare";
-import { getUserFromRequest, isMember } from "@/lib/auth";
+import { getUserFromRequest } from "@/lib/auth";
+import { isMember } from "@/lib/roles";
 import { getDashboardData } from "@/lib/queries/dashboard";
 
 export async function GET(req: Request): Promise<NextResponse> {

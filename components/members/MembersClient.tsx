@@ -8,7 +8,7 @@ import { toast } from "sonner";
 import { PlusIcon, PencilIcon, EyeIcon, UserMinusIcon } from "lucide-react";
 
 import type { Member, UserRole } from "@/types";
-import { canWrite, isAdmin } from "@/lib/auth";
+import { canWrite, isAdmin } from "@/lib/roles";
 import { formatDate, cn } from "@/lib/utils";
 import { Button } from "@/components/ui/button";
 import {

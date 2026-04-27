@@ -1,6 +1,6 @@
 import { redirect } from "next/navigation";
 import { getSessionUser } from "@/lib/session";
-import { isAdmin } from "@/lib/auth";
+import { isAdmin } from "@/lib/roles";
 
 export default async function SettingsPage() {
   const user = await getSessionUser();

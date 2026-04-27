@@ -1,7 +1,7 @@
 import { redirect } from "next/navigation";
 import { getCloudflareContext } from "@opennextjs/cloudflare";
 import { getSessionUser } from "@/lib/session";
-import { canWrite as canWriteRole } from "@/lib/auth";
+import { canWrite as canWriteRole, isMember } from "@/lib/roles";
 import { getDashboardData } from "@/lib/queries/dashboard";
 import { KpiTile } from "@/components/dashboard/KpiTile";
 import { DashboardCharts } from "@/components/dashboard/DashboardCharts";
@@ -11,6 +11,18 @@ import { QuickActions } from "@/components/dashboard/QuickActions";
 export default async function DashboardPage() {
   const user = await getSessionUser();
   if (!user) redirect("/login");
+  if (isMember(user.role)) {
+    return (
+      <div className="space-y-2">
+        <h1 className="font-headline text-2xl font-bold text-on-surface">
+          Dashboard
+        </h1>
+        <p className="text-sm text-on-surface-variant">
+          Member self-service is not available yet.
+        </p>
+      </div>
+    );
+  }
 
   const { env } = getCloudflareContext();
   const data = await getDashboardData(env.DB);

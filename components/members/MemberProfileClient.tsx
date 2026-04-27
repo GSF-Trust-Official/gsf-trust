@@ -7,7 +7,7 @@ import { toast } from "sonner";
 import { PencilIcon, UserMinusIcon } from "lucide-react";
 
 import type { Member, UserRole } from "@/types";
-import { canWrite, isAdmin } from "@/lib/auth";
+import { canWrite, isAdmin } from "@/lib/roles";
 import { cn } from "@/lib/utils";
 import { Button } from "@/components/ui/button";
 import {

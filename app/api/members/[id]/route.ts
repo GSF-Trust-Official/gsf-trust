@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server";
 import { getCloudflareContext } from "@opennextjs/cloudflare";
-import { getUserFromRequest, canWrite, isAdmin, isMember } from "@/lib/auth";
+import { getUserFromRequest } from "@/lib/auth";
+import { canWrite, isAdmin, isMember } from "@/lib/roles";
 import { UpdateMemberSchema } from "@/lib/validators/member";
 import {
   getMemberById,

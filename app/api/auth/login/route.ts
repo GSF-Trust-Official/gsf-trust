@@ -7,6 +7,7 @@ import { LoginSchema } from "@/lib/validators/auth";
 
 const MAX_FAILED_ATTEMPTS = 5;
 const LOCK_WINDOW = "-15 minutes";
+const ATTEMPT_RETENTION = "-7 days";
 const SESSION_MAX_AGE = 60 * 60 * 8; // 8 hours
 const UNKNOWN_IP = "unknown";
 
@@ -32,11 +33,13 @@ export async function POST(req: Request): Promise<NextResponse> {
 
     const user = await getUserByEmail(db, email);
 
-    const ip =
-      req.headers.get("cf-connecting-ip") ??
-      req.headers.get("x-forwarded-for") ??
-      UNKNOWN_IP;
+    const ip = getClientIp(req);
     const ua = req.headers.get("user-agent") ?? undefined;
+
+    await db
+      .prepare("DELETE FROM auth_attempts WHERE created_at < datetime('now', ?)")
+      .bind(ATTEMPT_RETENTION)
+      .run();
 
     const failedAttempts = await db
       .prepare(
@@ -145,4 +148,13 @@ export async function POST(req: Request): Promise<NextResponse> {
       { status: 500 }
     );
   }
+}
+
+function getClientIp(req: Request): string {
+  const cloudflareIp = req.headers.get("cf-connecting-ip");
+  if (cloudflareIp) return cloudflareIp.trim();
+
+  // Do not trust user-supplied X-Forwarded-For outside the Cloudflare edge.
+  // Treat direct/non-edge requests as one shared bucket.
+  return UNKNOWN_IP;
 }

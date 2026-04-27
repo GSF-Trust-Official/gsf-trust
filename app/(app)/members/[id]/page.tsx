@@ -4,7 +4,7 @@ import { getCloudflareContext } from "@opennextjs/cloudflare";
 import { ChevronLeftIcon } from "lucide-react";
 
 import { getSessionUser } from "@/lib/session";
-import { isMember } from "@/lib/auth";
+import { isMember } from "@/lib/roles";
 import { getMemberById } from "@/lib/queries/members";
 import { formatDate } from "@/lib/utils";
 import { MemberProfileClient } from "@/components/members/MemberProfileClient";
