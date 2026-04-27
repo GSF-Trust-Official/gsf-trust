@@ -13,7 +13,8 @@
       "Bash(npx @opennextjs/cloudflare build)",
       "Bash(git commit -m 'docs: mark Phase 2 complete in CLAUDE.md *)",
       "Bash(ls graphify-out/)",
-      "Bash(ls .graphify*)"
+      "Bash(ls .graphify*)",
+      "Bash(git commit -m 'fix: revert next.config.ts — initOpenNextCloudflareForDev import breaks Cloudflare build *)"
     ],
     "additionalDirectories": [
       "c:\\Users\\Muhammed suhaib\\Documents\\Everything\\GSF\\gsf-trust\\app\\api\\members",

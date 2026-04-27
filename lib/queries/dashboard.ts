@@ -29,8 +29,15 @@ export interface RecentActivityRow {
   member_code: string | null;
 }
 
+export interface DashboardDeltas {
+  total_funds: number;
+  general_balance: number;
+  zakat_balance: number;
+}
+
 export interface DashboardData {
   kpis: DashboardKpis;
+  deltas: DashboardDeltas;
   collectionRate: CollectionRateRow[];
   donationBreakdown: DonationBreakdownRow[];
   expenseAllocation: ExpenseAllocationRow[];
@@ -48,6 +55,8 @@ export async function getDashboardData(db: D1Database): Promise<DashboardData> {
     donationResult,
     expenseResult,
     activityResult,
+    generalDeltaResult,
+    zakatDeltaResult,
   ] = await db.batch([
     db.prepare(
       "SELECT COALESCE(SUM(amount), 0) as balance FROM ledger_entries WHERE account = 'general' AND is_deleted = 0"
@@ -95,6 +104,14 @@ export async function getDashboardData(db: D1Database): Promise<DashboardData> {
       ORDER BY date DESC, created_at DESC
       LIMIT 10
     `),
+    // Net change in general account this calendar month
+    db.prepare(
+      "SELECT COALESCE(SUM(amount), 0) as delta FROM ledger_entries WHERE account = 'general' AND is_deleted = 0 AND date >= date('now', 'start of month')"
+    ),
+    // Net change in zakat account this calendar month
+    db.prepare(
+      "SELECT COALESCE(SUM(amount), 0) as delta FROM ledger_entries WHERE account = 'zakat' AND is_deleted = 0 AND date >= date('now', 'start of month')"
+    ),
   ]);
 
   const general = ((generalResult.results[0] ?? {}) as { balance: number }).balance ?? 0;
@@ -102,6 +119,8 @@ export async function getDashboardData(db: D1Database): Promise<DashboardData> {
   const interest = ((interestResult.results[0] ?? {}) as { balance: number }).balance ?? 0;
   const medicalPool = ((medicalResult.results[0] ?? {}) as { pool: number }).pool ?? 0;
   const dues = ((duesResult.results[0] ?? {}) as { dues: number }).dues ?? 0;
+  const generalDelta = ((generalDeltaResult.results[0] ?? {}) as { delta: number }).delta ?? 0;
+  const zakatDelta   = ((zakatDeltaResult.results[0]   ?? {}) as { delta: number }).delta ?? 0;
 
   return {
     kpis: {
@@ -111,6 +130,11 @@ export async function getDashboardData(db: D1Database): Promise<DashboardData> {
       interest_balance: interest,
       medical_pool: medicalPool,
       outstanding_dues: dues,
+    },
+    deltas: {
+      total_funds: generalDelta + zakatDelta,
+      general_balance: generalDelta,
+      zakat_balance: zakatDelta,
     },
     collectionRate:   collectionResult.results as CollectionRateRow[],
     donationBreakdown: donationResult.results as DonationBreakdownRow[],
