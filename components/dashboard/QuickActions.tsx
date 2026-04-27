@@ -274,41 +274,72 @@ function DonationFields({ today }: { today: string }) {
 }
 
 function ExpenseFields({ today }: { today: string }) {
+  const [account, setAccount] = useState("general");
+
+  const categories =
+    account === "zakat"
+      ? [{ value: "scholarship", label: "Scholarship" }]
+      : account === "interest"
+        ? [
+            { value: "Bank Interest", label: "Bank Interest Received" },
+            { value: "Distribution to Poor", label: "Distribution to Poor" },
+          ]
+        : [
+            { value: "Medical", label: "Medical" },
+            { value: "Scholarship", label: "Scholarship" },
+            { value: "Admin", label: "Admin & Operations" },
+            { value: "Other", label: "Other" },
+          ];
+
   return (
     <div className="space-y-4">
+      <Field label="Account *">
+        <select
+          className={selectClass}
+          value={account}
+          onChange={(e) => setAccount(e.target.value)}
+        >
+          <option value="general">General</option>
+          <option value="zakat">Zakat (Restricted)</option>
+          <option value="interest">Interest Account</option>
+        </select>
+      </Field>
+
+      {account === "interest" && (
+        <p className="text-xs rounded-lg bg-warning-container px-3 py-2 text-[#4d3600]">
+          Use <strong>Bank Interest Received</strong> for deposits from the bank (positive amount). Use <strong>Distribution to Poor</strong> when disbursing interest funds (positive amount — the system records it as a debit).
+        </p>
+      )}
+      {account === "zakat" && (
+        <p className="text-xs rounded-lg bg-error-container px-3 py-2 text-error">
+          Zakat outflows are restricted to Scholarship only.
+        </p>
+      )}
+
       <div className="grid grid-cols-2 gap-3">
-        <Field label="Account *">
-          <select className={selectClass} defaultValue="general">
-            <option value="general">General</option>
-            <option value="zakat">Zakat</option>
-            <option value="interest">Interest</option>
+        <Field label="Category *">
+          <select className={selectClass} defaultValue={categories[0].value}>
+            {categories.map((c) => (
+              <option key={c.value} value={c.value}>{c.label}</option>
+            ))}
           </select>
         </Field>
-        <Field label="Amount (INR) *">
+        <Field label="Amount (₹) *">
           <Input className={fieldClass} type="number" min="0" defaultValue="0" />
         </Field>
       </div>
 
       <div className="grid grid-cols-2 gap-3">
-        <Field label="Category *">
-          <select className={selectClass} defaultValue="medical">
-            <option value="medical">Medical</option>
-            <option value="scholarship">Scholarship</option>
-            <option value="admin">Admin</option>
-            <option value="distribution">Distribution</option>
-          </select>
-        </Field>
         <Field label="Date *">
           <Input className={fieldClass} type="date" defaultValue={today} />
+        </Field>
+        <Field label="Reference">
+          <Input className={fieldClass} placeholder="Bank ref / receipt no..." />
         </Field>
       </div>
 
       <Field label="Description *">
-        <Input className={fieldClass} placeholder="What was this expense for?" />
-      </Field>
-
-      <Field label="Reference">
-        <Input className={fieldClass} placeholder="Bill no, transaction ID..." />
+        <Input className={fieldClass} placeholder="What was this for?" />
       </Field>
     </div>
   );

@@ -41,8 +41,8 @@ export default async function DashboardPage() {
         <QuickActions canWrite={writeAccess} />
       </div>
 
-      {/* KPI tiles */}
-      <div className="grid grid-cols-2 md:grid-cols-3 xl:grid-cols-6 gap-3 md:gap-4">
+      {/* KPI tiles — 2 cols mobile, 3 cols tablet+desktop (2 rows of 3) */}
+      <div className="grid grid-cols-2 md:grid-cols-3 gap-4">
         <KpiTile
           label="Total Funds"
           value={kpis.total_funds}
@@ -64,7 +64,6 @@ export default async function DashboardPage() {
           value={kpis.interest_balance}
           amountColor="text-warning"
           note="Awaiting distribution"
-          accent="border-l-4 border-l-[#8b6a00]"
           tooltip="Bank savings interest — haram, must be distributed to the poor"
         />
         <KpiTile
