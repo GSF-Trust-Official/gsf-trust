@@ -15,11 +15,15 @@
       "Bash(ls graphify-out/)",
       "Bash(ls .graphify*)",
       "Bash(git commit -m 'fix: revert next.config.ts — initOpenNextCloudflareForDev import breaks Cloudflare build *)",
-      "Bash(node -e \"const bcrypt = require\\('bcryptjs'\\); bcrypt.hash\\('GSFAbdulHaq@178', 12\\).then\\(h => console.log\\(h\\)\\);\")"
+      "Bash(node -e \"const bcrypt = require\\('bcryptjs'\\); bcrypt.hash\\('GSFAbdulHaq@178', 12\\).then\\(h => console.log\\(h\\)\\);\")",
+      "PowerShell(Copy-Item graphify-out/graph.json .graphify_old.json -ErrorAction SilentlyContinue)",
+      "PowerShell(Copy-Item graphify-out/graph.json .graphify_old.json)"
     ],
     "additionalDirectories": [
       "c:\\Users\\Muhammed suhaib\\Documents\\Everything\\GSF\\gsf-trust\\app\\api\\members",
-      "c:\\Users\\Muhammed suhaib\\Documents\\Everything\\GSF\\gsf-trust\\app\\(app)\\members"
+      "c:\\Users\\Muhammed suhaib\\Documents\\Everything\\GSF\\gsf-trust\\app\\(app)\\members",
+      "c:\\Users\\Muhammed suhaib\\Documents\\Everything\\GSF\\gsf-trust\\app\\api\\medical",
+      "c:\\Users\\Muhammed suhaib\\Documents\\Everything\\GSF\\gsf-trust\\app\\api\\scholarship\\announcement\\[id]"
     ]
   }
 }
