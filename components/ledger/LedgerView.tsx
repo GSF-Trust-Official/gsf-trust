@@ -3,7 +3,7 @@
 import { useState, useCallback, useTransition } from "react";
 import { useRouter } from "next/navigation";
 import { toast } from "sonner";
-import { Pencil, Trash2, ChevronLeft, ChevronRight, Filter, Plus, TrendingUp, TrendingDown } from "lucide-react";
+import { Pencil, Trash2, ChevronLeft, ChevronRight, Filter, TrendingUp, TrendingDown } from "lucide-react";
 
 import { cn } from "@/lib/utils";
 import { formatINR, formatDate } from "@/lib/utils";

@@ -110,7 +110,7 @@ export async function insertExpense(
     userId:      string;
   }
 ): Promise<void> {
-  const { account, category, description, amount, date, reference, notes, userId } = params;
+  const { account, category, description, amount, date, reference, userId } = params;
   const id = generateId();
   const storedAmount = -Math.abs(amount);
 
@@ -144,7 +144,7 @@ export async function insertInterest(
     userId:      string;
   }
 ): Promise<void> {
-  const { type, category, description, amount, date, reference, notes, userId } = params;
+  const { type, category, description, amount, date, reference, userId } = params;
   const id = generateId();
   const storedAmount = type === "credit" ? Math.abs(amount) : -Math.abs(amount);
 
@@ -179,7 +179,7 @@ export async function updateEntry(
     before:      unknown;
   }
 ): Promise<void> {
-  const { id, category, description, amount, date, reference, notes, userId, before } = params;
+  const { id, category, description, amount, date, reference, userId, before } = params;
 
   await db.batch([
     db.prepare(`

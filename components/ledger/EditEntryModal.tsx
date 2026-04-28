@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState, useEffect, useTransition } from "react";
 import { toast } from "sonner";
 import { Save } from "lucide-react";
 
@@ -38,17 +38,21 @@ export function EditEntryModal({ open, entry, account, categories, onOpenChange,
   const [amount,      setAmount]      = useState(String(Math.abs(entry.amount)));
   const [date,        setDate]        = useState(entry.date);
   const [reference,   setReference]   = useState(entry.reference ?? "");
+  const [, startTransition] = useTransition();
 
-  // Sync when entry changes
+  // Sync form fields when a different entry is opened
   useEffect(() => {
     if (open) {
-      setCategory(entry.category);
-      setDescription(entry.description);
-      setAmount(String(Math.abs(entry.amount)));
-      setDate(entry.date);
-      setReference(entry.reference ?? "");
+      startTransition(() => {
+        setCategory(entry.category);
+        setDescription(entry.description);
+        setAmount(String(Math.abs(entry.amount)));
+        setDate(entry.date);
+        setReference(entry.reference ?? "");
+      });
     }
-  }, [open, entry]);
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [open, entry.id]);
 
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault();

@@ -16,10 +16,6 @@ import {
 } from "@/components/ui/dialog";
 
 const fieldClass = "h-10 border-0 bg-surface-container px-3 text-sm shadow-none focus-visible:bg-white";
-const selectClass = cn(
-  fieldClass,
-  "w-full rounded-lg outline-none focus-visible:border-ring focus-visible:ring-3 focus-visible:ring-ring/50"
-);
 
 interface Props {
   open:            boolean;
