@@ -17,7 +17,6 @@ import {
   DialogTitle,
   DialogDescription,
 } from "@/components/ui/dialog";
-import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import {
   LogSubscriptionModal,
@@ -99,12 +98,6 @@ export function SubscriptionMatrix({ matrix, arrears, year, role, members }: Pro
       setBulkLoading(false);
     }
   }
-
-  const fieldClass = "h-10 border-0 bg-surface-container px-3 text-sm shadow-none focus-visible:bg-white";
-  const selectClass = cn(
-    fieldClass,
-    "w-full rounded-lg outline-none focus-visible:border-ring focus-visible:ring-3 focus-visible:ring-ring/50"
-  );
 
   return (
     <div className="space-y-4">

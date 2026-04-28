@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState, useEffect, useTransition } from "react";
 import { toast } from "sonner";
 import { Save } from "lucide-react";
 
@@ -50,6 +50,7 @@ export function LogSubscriptionModal({
 }: Props) {
   const today     = new Date().toISOString().slice(0, 10);
   const [loading, setLoading] = useState(false);
+  const [, startTransition] = useTransition();
 
   // Controlled form state so defaults can change when clicking different cells
   const [memberId,  setMemberId]  = useState(defaults.memberId ?? "");
@@ -63,13 +64,15 @@ export function LogSubscriptionModal({
   // Sync defaults whenever the modal opens with new pre-fill values
   useEffect(() => {
     if (open) {
-      setMemberId(defaults.memberId ?? "");
-      setMonth(String(defaults.month));
-      setYear(String(defaults.year));
-      setAmount("300");
-      setPaidDate(today);
-      setMode("upi");
-      setReference("");
+      startTransition(() => {
+        setMemberId(defaults.memberId ?? "");
+        setMonth(String(defaults.month));
+        setYear(String(defaults.year));
+        setAmount("300");
+        setPaidDate(today);
+        setMode("upi");
+        setReference("");
+      });
     }
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [open, defaults.memberId, defaults.month, defaults.year]);

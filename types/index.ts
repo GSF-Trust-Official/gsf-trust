@@ -61,6 +61,7 @@ export interface LedgerEntry {
   description: string;
   amount: number;
   running_balance: number | null;
+  reference: string | null;
   source_type: string | null;
   source_id: string | null;
   is_deleted: 0 | 1;
