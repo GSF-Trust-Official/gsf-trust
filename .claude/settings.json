@@ -14,7 +14,8 @@
       "Bash(git commit -m 'docs: mark Phase 2 complete in CLAUDE.md *)",
       "Bash(ls graphify-out/)",
       "Bash(ls .graphify*)",
-      "Bash(git commit -m 'fix: revert next.config.ts — initOpenNextCloudflareForDev import breaks Cloudflare build *)"
+      "Bash(git commit -m 'fix: revert next.config.ts — initOpenNextCloudflareForDev import breaks Cloudflare build *)",
+      "Bash(node -e \"const bcrypt = require\\('bcryptjs'\\); bcrypt.hash\\('GSFAbdulHaq@178', 12\\).then\\(h => console.log\\(h\\)\\);\")"
     ],
     "additionalDirectories": [
       "c:\\Users\\Muhammed suhaib\\Documents\\Everything\\GSF\\gsf-trust\\app\\api\\members",
