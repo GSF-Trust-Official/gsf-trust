@@ -4,7 +4,7 @@ import { getSessionUser } from "@/lib/session";
 import { isMember } from "@/lib/roles";
 import { getLedger } from "@/lib/queries/ledger";
 import { LedgerPageClient } from "@/components/ledger/LedgerPageClient";
-import { ZAKAT_CATEGORIES } from "@/lib/validators/ledger";
+import { INTEREST_CATEGORIES } from "@/lib/validators/ledger";
 
 interface Props {
   searchParams: Promise<{
@@ -15,16 +15,16 @@ interface Props {
   }>;
 }
 
-function ZakatBadge() {
+function InterestBadge() {
   return (
-    <span className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full bg-error-container text-error text-xs font-semibold">
-      <span className="w-1.5 h-1.5 rounded-full bg-error" />
-      Restricted Account
+    <span className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full bg-warning-container text-warning text-xs font-semibold">
+      <span className="w-1.5 h-1.5 rounded-full bg-warning" />
+      Interest Payable to Poor
     </span>
   );
 }
 
-export default async function ZakatPage({ searchParams }: Props) {
+export default async function InterestPage({ searchParams }: Props) {
   const user = await getSessionUser();
   if (!user) redirect("/login");
   if (isMember(user.role)) redirect("/dashboard");
@@ -38,22 +38,22 @@ export default async function ZakatPage({ searchParams }: Props) {
   const { env } = getCloudflareContext();
 
   const result = await getLedger(env.DB, {
-    account: "zakat",
+    account: "interest",
     dateFrom, dateTo, direction,
     page, pageSize: 20,
   });
 
   return (
     <LedgerPageClient
-      account="zakat"
+      account="interest"
       entries={result.entries}
       total={result.total}
       balance={result.balance}
       page={result.page}
       pageSize={result.pageSize}
       role={user.role}
-      categories={ZAKAT_CATEGORIES}
-      badge={<ZakatBadge />}
+      categories={INTEREST_CATEGORIES}
+      badge={<InterestBadge />}
       dateFrom={dateFrom}
       dateTo={dateTo}
       direction={direction ?? ""}
