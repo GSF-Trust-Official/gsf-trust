@@ -102,7 +102,7 @@ export function AddCaseModal({ open, onOpenChange, onSuccess }: Props) {
               className="h-4 w-4 rounded border-outline-variant accent-primary"
             />
             <Label htmlFor="mask-name" className="cursor-pointer font-normal">
-              Mask name for privacy (viewers see "XXXX")
+              Mask name for privacy (viewers see &quot;XXXX&quot;)
             </Label>
           </div>
 
