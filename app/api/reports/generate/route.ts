@@ -17,6 +17,8 @@ export async function POST(req: Request): Promise<Response> {
   try {
     const user = await getSessionUser();
     if (!user) return Response.json({ error: "Unauthorized" }, { status: 401 });
+    if (user.mustChangePassword)
+      return Response.json({ error: "Password change required", code: "MUST_CHANGE_PASSWORD" }, { status: 403 });
     if (isMember(user.role)) return Response.json({ error: "Forbidden" }, { status: 403 });
 
     const body = await req.json();

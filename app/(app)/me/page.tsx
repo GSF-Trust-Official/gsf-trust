@@ -87,7 +87,7 @@ export default async function MeDashboardPage() {
           <p className="font-semibold text-on-surface text-sm">Make a Payment</p>
           <p className="text-xs text-on-surface-variant mt-1">Bank details and UPI QR code</p>
         </Link>
-        <Link href="/scholarship" className="rounded-xl border border-outline-variant bg-white p-5 hover:bg-surface-container transition-colors">
+        <Link href="/me/scholarship" className="rounded-xl border border-outline-variant bg-white p-5 hover:bg-surface-container transition-colors">
           <p className="font-semibold text-on-surface text-sm">Scholarship Announcements</p>
           <p className="text-xs text-on-surface-variant mt-1">View current scholarship opportunities</p>
         </Link>
