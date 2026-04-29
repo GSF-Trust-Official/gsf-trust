@@ -104,6 +104,7 @@ export async function POST(req: Request): Promise<NextResponse> {
       name: user.name,
       tokenVersion: user.token_version,
       mustChangePassword,
+      memberId: user.member_id ?? null,
     });
 
     await db.batch([

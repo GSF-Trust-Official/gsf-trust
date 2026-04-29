@@ -5,6 +5,13 @@ import { canWrite, isMember } from "@/lib/roles";
 import { LogSubscriptionSchema } from "@/lib/validators/subscription";
 import { getMatrixForYear, upsertSubscription } from "@/lib/queries/subscriptions";
 import { getMemberById } from "@/lib/queries/members";
+import { getSetting } from "@/lib/queries/settings";
+import {
+  sendReceipt,
+  buildSubscriptionReceiptHtml,
+  buildSubscriptionReceiptText,
+  buildSubscriptionReceiptWhatsApp,
+} from "@/lib/email";
 
 export async function GET(req: Request): Promise<NextResponse> {
   try {
@@ -63,7 +70,36 @@ export async function POST(req: Request): Promise<NextResponse> {
       userId:    user.sub,
     });
 
-    return NextResponse.json({ ok: true });
+    const monthLabel = new Date(year, month - 1).toLocaleDateString("en-IN", {
+      month: "short", year: "numeric",
+    });
+    const receiptParams = {
+      memberName: member.name,
+      memberCode: member.code,
+      monthLabel,
+      amount,
+      mode,
+      paidDate:  paid_date,
+      reference: reference ?? null,
+    };
+
+    let emailSent = false;
+    const whatsappText = buildSubscriptionReceiptWhatsApp(receiptParams);
+
+    if (member.email) {
+      const enabled = await getSetting(db, "receipt_subscriptions_enabled");
+      if (enabled !== "0") {
+        void sendReceipt({
+          to:      member.email,
+          subject: `Payment Receipt — GSF Foundation (${monthLabel})`,
+          html:    buildSubscriptionReceiptHtml(receiptParams),
+          text:    buildSubscriptionReceiptText(receiptParams),
+        });
+        emailSent = true;
+      }
+    }
+
+    return NextResponse.json({ ok: true, email_sent: emailSent, whatsapp_text: whatsappText });
   } catch (err) {
     console.error("POST /api/subscriptions failed", err);
     return NextResponse.json({ error: "Internal server error" }, { status: 500 });

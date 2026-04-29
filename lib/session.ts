@@ -17,14 +17,15 @@ export async function getSessionUser(): Promise<JwtPayload | null> {
     const { env } = getCloudflareContext();
     const row = await env.DB
       .prepare(
-        "SELECT token_version, must_change_password FROM users WHERE id = ? AND is_active = 1"
+        "SELECT token_version, must_change_password, member_id FROM users WHERE id = ? AND is_active = 1"
       )
       .bind(payload.sub)
-      .first<{ token_version: number; must_change_password: 0 | 1 }>();
+      .first<{ token_version: number; must_change_password: 0 | 1; member_id: string | null }>();
     if (!row || row.token_version !== payload.tokenVersion) return null;
     return {
       ...payload,
       mustChangePassword: row.must_change_password === 1,
+      memberId: row.member_id ?? null,
     };
   } catch {
     return null;

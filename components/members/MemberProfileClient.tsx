@@ -4,7 +4,7 @@ import * as React from "react";
 import { useState } from "react";
 import { useRouter } from "next/navigation";
 import { toast } from "sonner";
-import { PencilIcon, UserMinusIcon } from "lucide-react";
+import { PencilIcon, UserMinusIcon, Mail } from "lucide-react";
 
 import type { Member, UserRole } from "@/types";
 import { canWrite, isAdmin } from "@/lib/roles";
@@ -26,9 +26,29 @@ interface Props {
 
 export function MemberProfileClient({ member, role }: Props) {
   const router = useRouter();
-  const [modalOpen, setModalOpen] = useState(false);
-  const [confirmOpen, setConfirmOpen] = useState(false);
+  const [modalOpen,     setModalOpen]     = useState(false);
+  const [confirmOpen,   setConfirmOpen]   = useState(false);
   const [isDeactivating, setIsDeactivating] = useState(false);
+  const [inviting,      setInviting]      = useState(false);
+
+  async function handleInvite() {
+    if (!member.email) { toast.error("Member has no email address on file"); return; }
+    setInviting(true);
+    try {
+      const res  = await fetch("/api/admin/invite-member", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ member_id: member.id }),
+      });
+      const data = await res.json() as { ok?: boolean; error?: string };
+      if (!res.ok) { toast.error(data.error ?? "Failed to send invite"); return; }
+      toast.success("Invite email sent");
+    } catch {
+      toast.error("Something went wrong");
+    } finally {
+      setInviting(false);
+    }
+  }
 
   async function handleDeactivate() {
     setIsDeactivating(true);
@@ -73,6 +93,17 @@ export function MemberProfileClient({ member, role }: Props) {
           >
             <PencilIcon />
             Edit
+          </Button>
+        )}
+        {isAdmin(role) && member.status === "active" && member.email && (
+          <Button
+            variant="outline"
+            size="sm"
+            disabled={inviting}
+            onClick={handleInvite}
+          >
+            <Mail />
+            {inviting ? "Sending…" : "Invite to Portal"}
           </Button>
         )}
         {isAdmin(role) && member.status === "active" && (

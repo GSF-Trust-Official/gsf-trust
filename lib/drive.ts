@@ -107,3 +107,42 @@ export function isDriveConfigured(env: {
     Boolean(env.GOOGLE_DRIVE_FOLDER_ID)
   );
 }
+
+interface DriveFile { id: string; name: string; createdTime: string }
+
+/**
+ * List files in the Drive folder whose names start with a given prefix.
+ */
+export async function listDriveFiles(
+  prefix: string,
+  env: { GOOGLE_DRIVE_SERVICE_ACCOUNT_JSON: string; GOOGLE_DRIVE_FOLDER_ID: string }
+): Promise<DriveFile[]> {
+  const sa    = JSON.parse(env.GOOGLE_DRIVE_SERVICE_ACCOUNT_JSON) as ServiceAccount;
+  const token = await getAccessToken(sa);
+
+  const q = encodeURIComponent(
+    `'${env.GOOGLE_DRIVE_FOLDER_ID}' in parents and name contains '${prefix}' and trashed = false`
+  );
+  const res = await fetch(
+    `https://www.googleapis.com/drive/v3/files?q=${q}&fields=files(id,name,createdTime)&pageSize=200`,
+    { headers: { Authorization: `Bearer ${token}` } }
+  );
+  if (!res.ok) return [];
+  const data = (await res.json()) as { files: DriveFile[] };
+  return data.files ?? [];
+}
+
+/**
+ * Permanently delete a file from Drive (used to prune old backups).
+ */
+export async function deleteDriveFile(
+  fileId: string,
+  env: { GOOGLE_DRIVE_SERVICE_ACCOUNT_JSON: string; GOOGLE_DRIVE_FOLDER_ID: string }
+): Promise<void> {
+  const sa    = JSON.parse(env.GOOGLE_DRIVE_SERVICE_ACCOUNT_JSON) as ServiceAccount;
+  const token = await getAccessToken(sa);
+  await fetch(`https://www.googleapis.com/drive/v3/files/${fileId}`, {
+    method:  "DELETE",
+    headers: { Authorization: `Bearer ${token}` },
+  });
+}

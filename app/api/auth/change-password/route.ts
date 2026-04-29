@@ -98,6 +98,7 @@ export async function POST(req: Request): Promise<NextResponse> {
       name: user.name,
       tokenVersion: newTokenVersion,
       mustChangePassword: false,
+      memberId: user.memberId ?? null,
     });
 
     const res = NextResponse.json({ ok: true });

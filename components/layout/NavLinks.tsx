@@ -14,6 +14,7 @@ import {
   GraduationCap,
   BarChart3,
   Settings,
+  Banknote,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import type { UserRole } from "@/types";
@@ -36,6 +37,7 @@ const NAV_ITEMS: NavItem[] = [
   { href: "/medical", label: "Medical Cases", icon: HeartHandshake, roles: ["admin", "editor", "viewer"] },
   { href: "/scholarship", label: "Scholarship", icon: GraduationCap, roles: ["admin", "editor", "viewer"] },
   { href: "/reports", label: "Reports", icon: BarChart3, roles: ["admin", "editor", "viewer"] },
+  { href: "/payments", label: "Payments", icon: Banknote, roles: ["admin", "editor", "viewer"] },
   { href: "/settings", label: "Settings", icon: Settings, roles: ["admin"] },
 ];
 

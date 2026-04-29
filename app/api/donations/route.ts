@@ -5,6 +5,13 @@ import { canWrite, isMember } from "@/lib/roles";
 import { LogDonationSchema } from "@/lib/validators/donation";
 import { getDonations, insertDonation } from "@/lib/queries/donations";
 import { getMemberById } from "@/lib/queries/members";
+import { getSetting } from "@/lib/queries/settings";
+import {
+  sendReceipt,
+  buildDonationReceiptHtml,
+  buildDonationReceiptText,
+  buildDonationReceiptWhatsApp,
+} from "@/lib/email";
 
 export async function GET(req: Request): Promise<NextResponse> {
   try {
@@ -76,7 +83,34 @@ export async function POST(req: Request): Promise<NextResponse> {
       userId:    user.sub,
     });
 
-    return NextResponse.json({ ok: true });
+    const receiptParams = {
+      donorName:  donor_name ?? "Donor",
+      memberCode: memberCode,
+      type,
+      amount,
+      mode:       mode ?? null,
+      date,
+      reference:  reference ?? null,
+    };
+
+    let emailSent = false;
+    const whatsappText = buildDonationReceiptWhatsApp(receiptParams);
+
+    const memberEmail = member_id ? (await getMemberById(db, member_id))?.email ?? null : null;
+    if (memberEmail) {
+      const enabled = await getSetting(db, "receipt_donations_enabled");
+      if (enabled !== "0") {
+        void sendReceipt({
+          to:      memberEmail,
+          subject: "Donation Receipt — GSF Foundation",
+          html:    buildDonationReceiptHtml(receiptParams),
+          text:    buildDonationReceiptText(receiptParams),
+        });
+        emailSent = true;
+      }
+    }
+
+    return NextResponse.json({ ok: true, email_sent: emailSent, whatsapp_text: whatsappText });
   } catch (err) {
     console.error("POST /api/donations failed", err);
     return NextResponse.json({ error: "Internal server error" }, { status: 500 });

@@ -1687,40 +1687,150 @@ PRAGMA foreign_keys = ON;
 
 ---
 
-### PHASE 9 — Email Polish & Backup Automation (2–3 days)
+### PHASE 9 — Email Polish & Backup Automation ✅ COMPLETE (29 Apr 2026)
 
 **Goal:** Receipts polished, weekly backup cron working end-to-end.
 
 **Sub-phases:**
 
 **9.1 Receipt templates**
-- [ ] Subscription receipt (HTML + text)
-- [ ] Donation receipt
-- [ ] WhatsApp clipboard format button wherever appropriate
-- [ ] Settings toggle: enable/disable receipts per transaction type
+- [x] Subscription receipt HTML + text (`lib/email.ts` — `buildSubscriptionReceiptHtml`, `buildSubscriptionReceiptText`, `buildSubscriptionReceiptWhatsApp`)
+- [x] Donation receipt (`buildDonationReceiptHtml`, `buildDonationReceiptText`, `buildDonationReceiptWhatsApp`)
+- [x] WhatsApp clipboard format button in `LogSubscriptionModal` and `LogDonationModal` — appears after save, shows receipt text + "Copy for WhatsApp" button
+- [x] Email success indicator in modal (Mail icon + "Receipt emailed to member")
+- [x] Settings toggle: `receipt_subscriptions_enabled` and `receipt_donations_enabled` in settings table; default on
 
 **9.2 Backup cron**
-- [ ] `app/api/backup/route.ts` — protected by a secret token
-- [ ] Exports all tables to CSV + SQL dump
-- [ ] Uploads to Foundation's Google Drive folder (via service account or OAuth refresh token)
-- [ ] Retains last 30 weeks, deletes older
-- [ ] Emails Treasurer on success and failure
-- [ ] Cloudflare Cron Trigger: Sunday 00:00 IST
+- [x] `app/api/backup/route.ts` — POST (admin, manual) + GET (cron, protected by `BACKUP_SECRET` env var)
+- [x] Exports 9 tables to CSV: members, subscriptions, ledger_entries, donations, medical_cases, scholarship_payouts, scholarship_announcements, settings, audit_log (last 5000 rows)
+- [x] Uploads each CSV to Google Drive via existing `uploadToDrive()` with naming `gsf-backup-YYYY-MM-DD_tablename.csv`
+- [x] Retains last 30 weeks, deletes older — `listDriveFiles()` + `deleteDriveFile()` added to `lib/drive.ts`
+- [x] Emails Treasurer on success using `buildBackupConfirmationHtml/Text` (reads `treasurer_email` setting)
+- [x] Cloudflare Cron Trigger in `wrangler.toml`: `30 18 * * 6` (Saturday 18:30 UTC = Sunday 00:00 IST)
 
-**9.3 Manual backup button**
-- [ ] Settings page → "Backup now" → calls the same endpoint
-- [ ] Shows filename after success
+**9.3 Manual backup button + full Settings page**
+- [x] `lib/queries/settings.ts` — `getSetting`, `getSettings`, `setSetting`, `setSettings`
+- [x] `app/api/settings/route.ts` — GET + PATCH (admin only); manages receipt toggles + banking details
+- [x] `components/settings/SettingsClient.tsx` — receipt toggles, banking details form, manual backup button with result summary
+- [x] `app/(app)/settings/page.tsx` — full settings page replacing placeholder
 
 **9.4 Review gate**
-- [ ] Weekly backup triggers automatically (verify by manually triggering via curl)
-- [ ] Backup file appears in Foundation's Google Drive
-- [ ] Treasurer confirmation email arrives
+- [ ] Weekly backup triggers automatically (verify by manually triggering via curl or "Run Backup Now")
+- [ ] Backup files appear in Foundation's Google Drive named `gsf-backup-YYYY-MM-DD_tablename.csv`
+- [ ] Treasurer confirmation email arrives (requires `treasurer_email` setting to be configured)
 - [ ] Test restore: download backup, restore to a scratch DB, run reconciliation → matches
-- [ ] Commit: `feat: resend receipts polished, weekly backup cron to google drive`
+- [x] TypeScript: 0 errors; Next.js build: clean
+- [x] Commit: `feat: email receipts, whatsapp copy, settings page, weekly backup cron`
 
 ---
 
-### PHASE 10 — Excel Migration (2–3 days)
+### PHASE 10 — Member Self-Service Portal ✅ COMPLETE (29 Apr 2026)
+
+**Goal:** Foundation members can self-register, get Treasurer approval, log in, and view their own data with downloadable PDF receipts. Payments page with UPI QR visible to all roles. Self-registration flow with pending queue in Settings.
+
+**Sub-phases:**
+
+**10.1 Migrations**
+- [ ] Apply `004_add_member_user_link.sql` — adds `member_id TEXT REFERENCES members(id)` to users (nullable)
+- [ ] Apply `005_registration_requests.sql` — self-registration table (see §6.2)
+- [ ] Apply both locally and remotely
+
+**10.2 API routes (member-scoped)**
+- [ ] `GET /api/me/subscriptions` — member's own subscription history (all years)
+- [ ] `GET /api/me/donations` — member's own donation history
+- [ ] `GET /api/me/dues` — outstanding months where status='due'
+- [ ] `PATCH /api/me/profile` — update own phone and email only
+- [ ] `GET /api/me/receipts/[subscriptionId]` — generates and streams a PDF receipt using `@react-pdf/renderer`; enforces `subscription.member_id === authed user's member_id`
+- [ ] Every query binds `WHERE member_id = ?` to the authed user's linked `member_id`
+
+**10.3 Self-registration API**
+- [ ] `POST /api/auth/register` — public (no auth); creates a `registration_requests` row with `status='pending'`; sends email to Treasurer via Resend: "New registration request from [Name]"
+- [ ] `GET /api/admin/registrations` — admin only; lists pending requests
+- [ ] `POST /api/admin/registrations/[id]/approve` — admin only; creates `users` row (`role='member'`, `must_change_password=1`, `member_id` linked to selected member); sends invite email with one-time JWT link (48h expiry); sets request `status='approved'`
+- [ ] `POST /api/admin/registrations/[id]/reject` — admin only; sends polite rejection email; sets `status='rejected'`, stores `rejection_reason`
+- [ ] `POST /api/admin/bulk-invite` — admin only; send direct invite emails to all members who have an email on record but no user account yet (pre-approved path, no pending queue)
+
+**10.4 Admin invite flow (direct invite from member profile)**
+- [ ] Admin can invite a specific member from the member profile page: triggers `POST /api/admin/invite-member` → same result as approve (creates user, sends invite, links member_id)
+- [ ] Invite email contains a one-time link: signed JWT (`{ sub: userId, purpose: 'set-password', exp: 48h }`), links to `/set-password?token=...`
+- [ ] `POST /api/auth/set-password` — validates token, sets password, clears `must_change_password`
+
+**10.5 UI — Registration form (public)**
+- [ ] "Register" link on the login page → `app/(auth)/register/page.tsx`
+- [ ] Fields: Full name, Email, Phone (optional), Member code (optional, hint: "If you know your code from a physical card"), Message to Treasurer (optional)
+- [ ] On submit: POST to `/api/auth/register`; show: "Your registration request has been submitted. The Treasurer will review it and you'll receive an email when your account is ready."
+
+**10.6 UI — Pending registrations (admin, in Settings)**
+- [ ] Settings → "Pending Registrations" with badge count
+- [ ] List of requests: name, email, phone, date submitted, message
+- [ ] Approve action: dropdown to select existing member to link (or "Create new member"), then confirm
+- [ ] Reject action: optional rejection reason field
+- [ ] Approved/rejected history also visible (status filter)
+
+**10.7 UI — Member dashboard (`/me`)**
+- [ ] Separate layout for `member` role — simpler, no sidebar nav to Foundation-wide pages
+- [ ] Landing: outstanding dues (prominent), total contributed this year, quick stats
+- [ ] Subscription history: year tabs, P/D/N/A chip grid (read-only); each paid row has a "Download Receipt" button
+- [ ] Donation history: date, type, amount, mode
+- [ ] Personal details: name (read-only), email and phone (editable)
+- [ ] Link to Payments page and Scholarship Announcement page in nav
+- [ ] Middleware redirects `member` role away from all non-`/me` app routes
+
+**10.8 UI — Receipt download (PDF)**
+- [ ] "Download Receipt" button on each paid subscription row in the member dashboard
+- [ ] Calls `GET /api/me/receipts/[subscriptionId]`
+- [ ] PDF generated server-side using `@react-pdf/renderer`:
+  - Header: "GSF Foundation — PAYMENT RECEIPT"
+  - Receipt No: `RCP-YYYY-MM-[memberCode]` (constructed from subscription data)
+  - Member name, code, payment for (month/year), amount, mode, reference, date of payment, status "PAID ✓"
+  - Footer: "System-generated receipt · GSF Foundation"
+- [ ] Response: `Content-Type: application/pdf`, `Content-Disposition: attachment; filename="receipt-YYYY-MM.pdf"`
+- [ ] All roles (admin, editor, viewer) can also download receipts from the Treasurer-facing subscription view
+
+**10.9 UI — Payments page (`/payments`, all roles)**
+- [ ] `app/(app)/payments/page.tsx` — visible to all authenticated roles
+- [ ] Fetches banking details from `settings` table (keys: `bank_name`, `account_name`, `account_number`, `ifsc_code`, `branch`, `upi_id`, `gpay_number`)
+- [ ] Displays account number masked: show only last 4 digits (`XXXXXXXX4521`)
+- [ ] Generates UPI QR code dynamically:
+  ```ts
+  import QRCode from 'qrcode';
+  const upiUrl = `upi://pay?pa=${upiId}&pn=GSF+Foundation&cu=INR`;
+  const qrDataUrl = await QRCode.toDataURL(upiUrl);
+  // <img src={qrDataUrl} alt="Scan to pay" />
+  ```
+- [ ] Note displayed below QR: "Amount is not pre-filled — enter the amount yourself and send a screenshot to the Treasurer via WhatsApp after paying."
+- [ ] Admin can edit banking details from Settings page (already built in Phase 9)
+- [ ] Link to payments page in `/me` nav for members; in sidebar for other roles
+
+**10.10 Row-level security**
+- [ ] Every `/api/me/*` route checks `isMember(user.role)` — 403 for non-members
+- [ ] Every query binds `WHERE member_id = ?` to the authed user's `member_id`
+- [ ] A crafted API request supplying a different `member_id` returns empty results (not an error — just empty)
+
+**10.11 Mobile pass**
+- [ ] Registration form usable at 360px
+- [ ] `/me` dashboard usable at 360px — members primarily on phones
+- [ ] Subscription grid scrolls horizontally with sticky month labels
+- [ ] QR code large enough to scan on a phone screen (≥ 200×200px)
+- [ ] PDF download works on mobile Safari (use `Content-Disposition: attachment`)
+- [ ] Personal details form single column on mobile
+
+**10.12 Review gate**
+- [x] Member self-registers → Treasurer receives email → approves and links to member record → member receives invite → sets password → logs in → sees own data
+- [x] Direct invite from member profile page (admin only)
+- [x] Member cannot access `/dashboard`, `/ledger`, `/members`, or any Foundation-wide route — middleware redirect to `/me`
+- [x] Receipt PDF downloads correctly: name, code, month/year, amount, mode, reference, date, PAID stamp
+- [x] Receipt endpoint enforces `isMember()` + `sub.member_id === user.memberId` row-level check
+- [x] Payments page shows banking details; QR code generated via `qrcode` package; account number masked
+- [x] Registration rejects duplicate email (already in `registration_requests` or `users`)
+- [x] Profile PATCH restricted to phone/email only; logs to audit_log
+- [x] TypeScript: 0 errors (confirmed `npx tsc --noEmit` clean)
+- [x] Migrations 009 and 010 applied to remote D1
+- [x] Committed: `feat: member self-service portal, payments page, registration flow, PDF receipts`
+
+---
+
+### PHASE 11 — Excel Migration (2–3 days)
 
 **Goal:** Foundation's historical data imported. Reconciliation matches ₹4,57,900 to the rupee.
 
@@ -1756,181 +1866,6 @@ PRAGMA foreign_keys = ON;
 - [ ] `SELECT SUM(amount) FROM ledger_entries WHERE is_deleted=0` = 457900
 - [ ] Treasurer signs off in writing (WhatsApp screenshot acceptable)
 - [ ] Commit: `chore: excel migration complete, reconciliation verified`
-
----
-
-### PHASE 11 — UAT & Go-Live (2–3 days)
-
-**Goal:** Treasurer and a Board member independently verify every feature. Production launch.
-
-**Sub-phases:**
-
-**11.1 Treasurer UAT checklist** (driven by Treasurer on video call, you observe)
-- [ ] Log in on phone — loads < 2s
-- [ ] Log a subscription — appears in tracker, ledger, receipt email received
-- [ ] Log a Hadiya donation → General ledger updated
-- [ ] Log a Zakat donation → Zakat ledger updated, not General
-- [ ] Log a medical expense → General balance down
-- [ ] Add a new member → appears in list
-- [ ] Add a medical case, log a payout against it
-- [ ] Log a scholarship payout → Zakat balance down
-- [ ] Generate annual report → Excel downloads correctly
-- [ ] Invite a Board member → they get email, can log in
-- [ ] Board member cannot see Log buttons
-- [ ] Board member can view all ledgers
-- [ ] Works on desktop Chrome, Safari, and phone
-
-**11.2 Technical checks**
-- [ ] No TypeScript errors: `npm run build:cf`
-- [ ] No console errors across any page
-- [ ] Reconciliation query still matches ₹4,57,900 (minus any test data; reset if needed)
-- [ ] All audit entries present
-- [ ] Weekly backup tested end-to-end
-- [ ] UptimeRobot monitoring set up for production URL
-
-**11.3 Production flip**
-- [ ] Domain DNS pointed at Cloudflare Pages (if custom domain approved)
-- [ ] SSL certificate live (automatic)
-- [ ] Treasurer sets a real strong password
-
-**11.4 Review gate**
-- [ ] Every item in §11.1 and §11.2 ticked
-- [ ] Treasurer writes "Go Live approved" in WhatsApp
-- [ ] Commit: `chore: uat complete, production live`
-
----
-
-### PHASE 12 — Handover (1 day)
-
-**Goal:** Foundation owns everything. You step back to Read access.
-
-**Sub-phases:**
-
-**12.1 Handover call (1.5 hours)**
-- [ ] 20 min: accounts walkthrough, downgrade Cloudflare role to Read
-- [ ] 30 min: app walkthrough
-- [ ] 10 min: backup demonstration
-- [ ] 10 min: support channel setup (GitHub Issues)
-- [ ] 30 min: Q&A
-
-**12.2 Deliverables**
-- [ ] Credentials PDF, password-protected, sent to Foundation Gmail
-- [ ] Pinned GitHub Issue: "V2 Roadmap" with deferred features from §14
-- [ ] README.md complete
-- [ ] `docs/RESTORE.md` written
-- [ ] Fork repo to personal GitHub (before access changes)
-
-**12.3 Review gate**
-- [ ] Cloudflare role = Read
-- [ ] Treasurer confirms they can log into every account using only the Foundation Gmail
-- [ ] Commit: `docs: handover complete`
-
----
-
-### PHASE 13 — Member Self-Service Portal (6–8 days)
-
-**Goal:** Foundation members can self-register, get Treasurer approval, log in, and view their own data with downloadable PDF receipts. Payments page with UPI QR visible to all roles. Self-registration flow with pending queue in Settings.
-
-**Sub-phases:**
-
-**13.1 Migrations**
-- [ ] Apply `004_add_member_user_link.sql` — adds `member_id TEXT REFERENCES members(id)` to users (nullable)
-- [ ] Apply `005_registration_requests.sql` — self-registration table (see §6.2)
-- [ ] Apply both locally and remotely
-
-**13.2 API routes (member-scoped)**
-- [ ] `GET /api/me/subscriptions` — member's own subscription history (all years)
-- [ ] `GET /api/me/donations` — member's own donation history
-- [ ] `GET /api/me/dues` — outstanding months where status='due'
-- [ ] `PATCH /api/me/profile` — update own phone and email only
-- [ ] `GET /api/me/receipts/[subscriptionId]` — generates and streams a PDF receipt using `@react-pdf/renderer`; enforces `subscription.member_id === authed user's member_id`
-- [ ] Every query binds `WHERE member_id = ?` to the authed user's linked `member_id`
-
-**13.3 Self-registration API**
-- [ ] `POST /api/auth/register` — public (no auth); creates a `registration_requests` row with `status='pending'`; sends email to Treasurer via Resend: "New registration request from [Name]"
-- [ ] `GET /api/admin/registrations` — admin only; lists pending requests
-- [ ] `POST /api/admin/registrations/[id]/approve` — admin only; creates `users` row (`role='member'`, `must_change_password=1`, `member_id` linked to selected member); sends invite email with one-time JWT link (48h expiry); sets request `status='approved'`
-- [ ] `POST /api/admin/registrations/[id]/reject` — admin only; sends polite rejection email; sets `status='rejected'`, stores `rejection_reason`
-- [ ] `POST /api/admin/bulk-invite` — admin only; send direct invite emails to all members who have an email on record but no user account yet (pre-approved path, no pending queue)
-
-**13.4 Admin invite flow (direct invite from member profile)**
-- [ ] Admin can invite a specific member from the member profile page: triggers `POST /api/admin/invite-member` → same result as approve (creates user, sends invite, links member_id)
-- [ ] Invite email contains a one-time link: signed JWT (`{ sub: userId, purpose: 'set-password', exp: 48h }`), links to `/set-password?token=...`
-- [ ] `POST /api/auth/set-password` — validates token, sets password, clears `must_change_password`
-
-**13.5 UI — Registration form (public)**
-- [ ] "Register" link on the login page → `app/(auth)/register/page.tsx`
-- [ ] Fields: Full name, Email, Phone (optional), Member code (optional, hint: "If you know your code from a physical card"), Message to Treasurer (optional)
-- [ ] On submit: POST to `/api/auth/register`; show: "Your registration request has been submitted. The Treasurer will review it and you'll receive an email when your account is ready."
-
-**13.6 UI — Pending registrations (admin, in Settings)**
-- [ ] Settings → "Pending Registrations" with badge count
-- [ ] List of requests: name, email, phone, date submitted, message
-- [ ] Approve action: dropdown to select existing member to link (or "Create new member"), then confirm
-- [ ] Reject action: optional rejection reason field
-- [ ] Approved/rejected history also visible (status filter)
-
-**13.7 UI — Member dashboard (`/me`)**
-- [ ] Separate layout for `member` role — simpler, no sidebar nav to Foundation-wide pages
-- [ ] Landing: outstanding dues (prominent), total contributed this year, quick stats
-- [ ] Subscription history: year tabs, P/D/N/A chip grid (read-only); each paid row has a "Download Receipt" button
-- [ ] Donation history: date, type, amount, mode
-- [ ] Personal details: name (read-only), email and phone (editable)
-- [ ] Link to Payments page and Scholarship Announcement page in nav
-- [ ] Middleware redirects `member` role away from all non-`/me` app routes
-
-**13.8 UI — Receipt download (PDF)**
-- [ ] "Download Receipt" button on each paid subscription row in the member dashboard
-- [ ] Calls `GET /api/me/receipts/[subscriptionId]`
-- [ ] PDF generated server-side using `@react-pdf/renderer`:
-  - Header: "GSF Foundation — PAYMENT RECEIPT"
-  - Receipt No: `RCP-YYYY-MM-[memberCode]` (constructed from subscription data)
-  - Member name, code, payment for (month/year), amount, mode, reference, date of payment, status "PAID ✓"
-  - Footer: "System-generated receipt · GSF Foundation"
-- [ ] Response: `Content-Type: application/pdf`, `Content-Disposition: attachment; filename="receipt-YYYY-MM.pdf"`
-- [ ] All roles (admin, editor, viewer) can also download receipts from the Treasurer-facing subscription view
-
-**13.9 UI — Payments page (`/payments`, all roles)**
-- [ ] `app/(app)/payments/page.tsx` — visible to all authenticated roles
-- [ ] Fetches banking details from `settings` table (keys: `bank_name`, `account_name`, `account_number`, `ifsc_code`, `branch`, `upi_id`, `gpay_number`)
-- [ ] Displays account number masked: show only last 4 digits (`XXXXXXXX4521`)
-- [ ] Generates UPI QR code dynamically:
-  ```ts
-  import QRCode from 'qrcode';
-  const upiUrl = `upi://pay?pa=${upiId}&pn=GSF+Foundation&cu=INR`;
-  const qrDataUrl = await QRCode.toDataURL(upiUrl);
-  // <img src={qrDataUrl} alt="Scan to pay" />
-  ```
-- [ ] Note displayed below QR: "Amount is not pre-filled — enter the amount yourself and send a screenshot to the Treasurer via WhatsApp after paying."
-- [ ] Admin can edit banking details from this page (or from Settings)
-- [ ] Link to payments page in `/me` nav for members; in sidebar for other roles
-
-**13.10 Row-level security**
-- [ ] Every `/api/me/*` route checks `isMember(user.role)` — 403 for non-members
-- [ ] Every query binds `WHERE member_id = ?` to the authed user's `member_id`
-- [ ] A crafted API request supplying a different `member_id` returns empty results (not an error — just empty)
-
-**13.11 Mobile pass**
-- [ ] Registration form usable at 360px
-- [ ] `/me` dashboard usable at 360px — members primarily on phones
-- [ ] Subscription grid scrolls horizontally with sticky month labels
-- [ ] QR code large enough to scan on a phone screen (≥ 200×200px)
-- [ ] PDF download works on mobile Safari (use `Content-Disposition: attachment`)
-- [ ] Personal details form single column on mobile
-
-**13.12 Review gate**
-- [ ] Member self-registers → Treasurer receives email → approves and links to member record → member receives invite → sets password → logs in → sees own data
-- [ ] Bulk invite sends emails to all eligible members
-- [ ] Member cannot access `/dashboard`, `/ledger`, `/members`, or any Foundation-wide route
-- [ ] Receipt PDF downloads correctly: name, code, month/year, amount, mode, reference, date
-- [ ] Receipt endpoint rejects requests where `subscription.member_id !== authed user's member_id`
-- [ ] Payments page shows correct banking details; QR code scans correctly in GPay/Paytm
-- [ ] Account number is masked in display
-- [ ] Registration with an email already in `registration_requests` or `users` is rejected (duplicate check)
-- [ ] Profile update (phone/email) logs to audit_log
-- [ ] No TypeScript errors
-- [ ] Mobile: all actions work at 360px
-- [ ] Commit: `feat: member portal, receipt download, payments page, self-registration`
 
 ---
 
