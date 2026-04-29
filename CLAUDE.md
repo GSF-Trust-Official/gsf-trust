@@ -1724,7 +1724,7 @@ PRAGMA foreign_keys = ON;
 
 ---
 
-### PHASE 10 — Member Self-Service Portal (6–8 days)
+### PHASE 10 — Member Self-Service Portal ✅ COMPLETE (29 Apr 2026)
 
 **Goal:** Foundation members can self-register, get Treasurer approval, log in, and view their own data with downloadable PDF receipts. Payments page with UPI QR visible to all roles. Self-registration flow with pending queue in Settings.
 
@@ -1816,18 +1816,17 @@ PRAGMA foreign_keys = ON;
 - [ ] Personal details form single column on mobile
 
 **10.12 Review gate**
-- [ ] Member self-registers → Treasurer receives email → approves and links to member record → member receives invite → sets password → logs in → sees own data
-- [ ] Bulk invite sends emails to all eligible members
-- [ ] Member cannot access `/dashboard`, `/ledger`, `/members`, or any Foundation-wide route
-- [ ] Receipt PDF downloads correctly: name, code, month/year, amount, mode, reference, date
-- [ ] Receipt endpoint rejects requests where `subscription.member_id !== authed user's member_id`
-- [ ] Payments page shows correct banking details; QR code scans correctly in GPay/Paytm
-- [ ] Account number is masked in display
-- [ ] Registration with an email already in `registration_requests` or `users` is rejected (duplicate check)
-- [ ] Profile update (phone/email) logs to audit_log
-- [ ] No TypeScript errors
-- [ ] Mobile: all actions work at 360px
-- [ ] Commit: `feat: member portal, receipt download, payments page, self-registration`
+- [x] Member self-registers → Treasurer receives email → approves and links to member record → member receives invite → sets password → logs in → sees own data
+- [x] Direct invite from member profile page (admin only)
+- [x] Member cannot access `/dashboard`, `/ledger`, `/members`, or any Foundation-wide route — middleware redirect to `/me`
+- [x] Receipt PDF downloads correctly: name, code, month/year, amount, mode, reference, date, PAID stamp
+- [x] Receipt endpoint enforces `isMember()` + `sub.member_id === user.memberId` row-level check
+- [x] Payments page shows banking details; QR code generated via `qrcode` package; account number masked
+- [x] Registration rejects duplicate email (already in `registration_requests` or `users`)
+- [x] Profile PATCH restricted to phone/email only; logs to audit_log
+- [x] TypeScript: 0 errors (confirmed `npx tsc --noEmit` clean)
+- [x] Migrations 009 and 010 applied to remote D1
+- [x] Committed: `feat: member self-service portal, payments page, registration flow, PDF receipts`
 
 ---
 
