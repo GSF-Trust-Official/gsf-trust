@@ -15,8 +15,24 @@ const PROTECTED_PATHS = [
   "/scholarship",
   "/reports",
   "/settings",
+  "/payments",
+  "/me",
   "/change-password",
   "/api",
+];
+
+// Foundation-wide routes that the member role may NOT access.
+const MEMBER_BLOCKED_PATHS = [
+  "/dashboard",
+  "/members",
+  "/subscriptions",
+  "/ledger",
+  "/zakat",
+  "/interest",
+  "/donations",
+  "/medical",
+  "/reports",
+  "/settings",
 ];
 
 const PUBLIC_API = [
@@ -61,6 +77,19 @@ export async function middleware(req: NextRequest): Promise<NextResponse> {
       }
       const url = req.nextUrl.clone();
       url.pathname = "/change-password";
+      return NextResponse.redirect(url);
+    }
+
+    // member role may not access Foundation-wide routes — redirect to /me.
+    if (
+      jwtPayload.role === "member" &&
+      MEMBER_BLOCKED_PATHS.some((p) => pathname.startsWith(p))
+    ) {
+      if (pathname.startsWith("/api")) {
+        return NextResponse.json({ error: "Forbidden" }, { status: 403 });
+      }
+      const url = req.nextUrl.clone();
+      url.pathname = "/me";
       return NextResponse.redirect(url);
     }
 

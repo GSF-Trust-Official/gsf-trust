@@ -1,5 +1,5 @@
 // TypeScript interfaces matching the D1 database schema exactly.
-// Keep in sync with cloudflare/migrations/ (latest: 005_add_interest_account.sql)
+// Keep in sync with cloudflare/migrations/ (latest: 010_registration_requests.sql)
 
 export type UserRole = "admin" | "editor" | "viewer" | "member";
 
@@ -12,6 +12,7 @@ export interface User {
   is_active: 0 | 1;
   must_change_password: 0 | 1;
   token_version: number;
+  member_id: string | null;
   two_factor_secret: string | null;
   created_at: string;
   updated_at: string;
@@ -172,6 +173,7 @@ export interface JwtPayload {
   name: string;
   tokenVersion: number;
   mustChangePassword: boolean;
+  memberId: string | null;
   exp: number;
 }
 

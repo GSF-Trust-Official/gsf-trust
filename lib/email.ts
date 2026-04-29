@@ -29,6 +29,9 @@ export async function sendReceipt(
   }
 }
 
+// Alias used by admin/invite routes — same behaviour as sendReceipt.
+export const sendEmail = sendReceipt;
+
 // ─── Subscription receipt ──────────────────────────────────────────────────────
 
 export interface SubscriptionReceiptParams {
