@@ -2,7 +2,7 @@
 
 import { useState, useEffect, useTransition } from "react";
 import { toast } from "sonner";
-import { Save } from "lucide-react";
+import { Save, MessageCircle, Mail } from "lucide-react";
 
 import { cn } from "@/lib/utils";
 import { Button } from "@/components/ui/button";
@@ -41,6 +41,13 @@ interface Props {
   onSuccess:     () => void;
 }
 
+interface SubmitResult {
+  ok:            boolean;
+  email_sent?:   boolean;
+  whatsapp_text?: string;
+  error?:        string;
+}
+
 export function LogSubscriptionModal({
   open,
   onOpenChange,
@@ -51,8 +58,9 @@ export function LogSubscriptionModal({
   const today     = new Date().toISOString().slice(0, 10);
   const [loading, setLoading] = useState(false);
   const [, startTransition] = useTransition();
+  const [whatsappText, setWhatsappText] = useState<string | null>(null);
+  const [emailSent,    setEmailSent]    = useState(false);
 
-  // Controlled form state so defaults can change when clicking different cells
   const [memberId,  setMemberId]  = useState(defaults.memberId ?? "");
   const [month,     setMonth]     = useState(String(defaults.month));
   const [year,      setYear]      = useState(String(defaults.year));
@@ -61,7 +69,6 @@ export function LogSubscriptionModal({
   const [mode,      setMode]      = useState("upi");
   const [reference, setReference] = useState("");
 
-  // Sync defaults whenever the modal opens with new pre-fill values
   useEffect(() => {
     if (open) {
       startTransition(() => {
@@ -72,6 +79,8 @@ export function LogSubscriptionModal({
         setPaidDate(today);
         setMode("upi");
         setReference("");
+        setWhatsappText(null);
+        setEmailSent(false);
       });
     }
   // eslint-disable-next-line react-hooks/exhaustive-deps
@@ -83,7 +92,7 @@ export function LogSubscriptionModal({
 
     setLoading(true);
     try {
-      const res = await fetch("/api/subscriptions", {
+      const res  = await fetch("/api/subscriptions", {
         method:  "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
@@ -97,11 +106,18 @@ export function LogSubscriptionModal({
           notes:     null,
         }),
       });
-      const data = (await res.json()) as { error?: string };
+      const data = (await res.json()) as SubmitResult;
       if (!res.ok) { toast.error(data.error ?? "Failed to log subscription"); return; }
-      toast.success("Subscription logged");
-      onOpenChange(false);
-      onSuccess();
+
+      if (data.email_sent) {
+        setEmailSent(true);
+        toast.success("Subscription logged · Receipt emailed");
+      } else {
+        toast.success("Subscription logged");
+      }
+
+      if (data.whatsapp_text) setWhatsappText(data.whatsapp_text);
+      else { onOpenChange(false); onSuccess(); }
     } catch {
       toast.error("Something went wrong");
     } finally {
@@ -109,8 +125,52 @@ export function LogSubscriptionModal({
     }
   }
 
+  function copyWhatsApp() {
+    if (!whatsappText) return;
+    navigator.clipboard.writeText(whatsappText).then(() => {
+      toast.success("Receipt copied — paste into WhatsApp");
+    });
+  }
+
+  function handleClose() {
+    onOpenChange(false);
+    if (whatsappText) onSuccess();
+  }
+
   const currentYear = new Date().getFullYear();
   const yearOptions = [currentYear + 1, currentYear, currentYear - 1, currentYear - 2];
+
+  // After save: show receipt action panel
+  if (whatsappText) {
+    return (
+      <Dialog open={open} onOpenChange={handleClose}>
+        <DialogContent className="max-w-lg rounded-xl" showCloseButton>
+          <DialogHeader className="p-5 pb-3">
+            <DialogTitle>Subscription Logged</DialogTitle>
+          </DialogHeader>
+          <div className="px-5 pb-5 space-y-4">
+            {emailSent && (
+              <div className="flex items-center gap-2 rounded-lg bg-success-container/30 border border-success/20 p-3 text-sm text-success font-medium">
+                <Mail className="size-4" />
+                Receipt emailed to member
+              </div>
+            )}
+            <div className="rounded-lg bg-surface-container p-3">
+              <p className="text-xs text-on-surface-variant mb-2 font-semibold uppercase tracking-wide">WhatsApp receipt text</p>
+              <pre className="text-xs text-on-surface whitespace-pre-wrap font-mono">{whatsappText}</pre>
+            </div>
+            <div className="flex gap-3">
+              <Button onClick={copyWhatsApp} className="gap-2 flex-1">
+                <MessageCircle className="size-4" />
+                Copy for WhatsApp
+              </Button>
+              <Button variant="outline" onClick={handleClose}>Done</Button>
+            </div>
+          </div>
+        </DialogContent>
+      </Dialog>
+    );
+  }
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>

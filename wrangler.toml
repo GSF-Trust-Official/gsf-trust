@@ -18,3 +18,7 @@ NODE_ENV = "production"
 
 # File exports (PDF/Excel) and backups are stored in Google Drive.
 # R2 is not used in this project.
+
+# Cron trigger: weekly backup every Sunday at 00:00 IST (18:30 UTC Saturday)
+[triggers]
+crons = ["30 18 * * 6"]

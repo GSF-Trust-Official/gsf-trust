@@ -2,7 +2,7 @@
 
 import { useState, useEffect, useTransition } from "react";
 import { toast } from "sonner";
-import { Save } from "lucide-react";
+import { Save, MessageCircle, Mail } from "lucide-react";
 
 import { cn } from "@/lib/utils";
 import { Button } from "@/components/ui/button";
@@ -42,10 +42,19 @@ interface Props {
   onSuccess:    () => void;
 }
 
+interface SubmitResult {
+  ok:             boolean;
+  email_sent?:    boolean;
+  whatsapp_text?: string;
+  error?:         string;
+}
+
 export function LogDonationModal({ open, onOpenChange, members, onSuccess }: Props) {
   const today = new Date().toISOString().slice(0, 10);
   const [, startTransition] = useTransition();
-  const [loading, setLoading] = useState(false);
+  const [loading,      setLoading]      = useState(false);
+  const [whatsappText, setWhatsappText] = useState<string | null>(null);
+  const [emailSent,    setEmailSent]    = useState(false);
 
   const [donorMode,  setDonorMode]  = useState<"member" | "external">("member");
   const [memberId,   setMemberId]   = useState("");
@@ -57,7 +66,6 @@ export function LogDonationModal({ open, onOpenChange, members, onSuccess }: Pro
   const [mode,       setMode]       = useState("upi");
   const [reference,  setReference]  = useState("");
 
-  // Reset form on open
   useEffect(() => {
     if (open) {
       startTransition(() => {
@@ -70,6 +78,8 @@ export function LogDonationModal({ open, onOpenChange, members, onSuccess }: Pro
         setDate(today);
         setMode("upi");
         setReference("");
+        setWhatsappText(null);
+        setEmailSent(false);
       });
     }
   // eslint-disable-next-line react-hooks/exhaustive-deps
@@ -115,13 +125,64 @@ export function LogDonationModal({ open, onOpenChange, members, onSuccess }: Pro
           notes: null,
         }),
       });
-      const data = await res.json() as { error?: string };
+      const data = await res.json() as SubmitResult;
       if (!res.ok) { toast.error(data.error ?? "Failed to log donation"); return; }
-      toast.success("Donation logged");
-      onOpenChange(false);
-      onSuccess();
+
+      if (data.email_sent) {
+        setEmailSent(true);
+        toast.success("Donation logged · Receipt emailed");
+      } else {
+        toast.success("Donation logged");
+      }
+
+      if (data.whatsapp_text) setWhatsappText(data.whatsapp_text);
+      else { onOpenChange(false); onSuccess(); }
     } catch { toast.error("Something went wrong"); }
     finally { setLoading(false); }
+  }
+
+  function copyWhatsApp() {
+    if (!whatsappText) return;
+    navigator.clipboard.writeText(whatsappText).then(() => {
+      toast.success("Receipt copied — paste into WhatsApp");
+    });
+  }
+
+  function handleClose() {
+    onOpenChange(false);
+    if (whatsappText) onSuccess();
+  }
+
+  // After save: show receipt panel
+  if (whatsappText) {
+    return (
+      <Dialog open={open} onOpenChange={handleClose}>
+        <DialogContent className="max-w-lg rounded-xl" showCloseButton>
+          <DialogHeader className="p-5 pb-3">
+            <DialogTitle>Donation Logged</DialogTitle>
+          </DialogHeader>
+          <div className="px-5 pb-5 space-y-4">
+            {emailSent && (
+              <div className="flex items-center gap-2 rounded-lg bg-success-container/30 border border-success/20 p-3 text-sm text-success font-medium">
+                <Mail className="size-4" />
+                Receipt emailed to member
+              </div>
+            )}
+            <div className="rounded-lg bg-surface-container p-3">
+              <p className="text-xs text-on-surface-variant mb-2 font-semibold uppercase tracking-wide">WhatsApp receipt text</p>
+              <pre className="text-xs text-on-surface whitespace-pre-wrap font-mono">{whatsappText}</pre>
+            </div>
+            <div className="flex gap-3">
+              <Button onClick={copyWhatsApp} className="gap-2 flex-1">
+                <MessageCircle className="size-4" />
+                Copy for WhatsApp
+              </Button>
+              <Button variant="outline" onClick={handleClose}>Done</Button>
+            </div>
+          </div>
+        </DialogContent>
+      </Dialog>
+    );
   }
 
   return (
@@ -300,7 +361,7 @@ export function LogDonationModal({ open, onOpenChange, members, onSuccess }: Pro
           </div>
 
           <div className="flex items-center justify-end gap-3 pt-1">
-            <Button type="button" variant="ghost" size="lg" onClick={() => onOpenChange(false)} disabled={loading}>
+            <Button type="button" variant="ghost" size="lg" onClick={handleClose} disabled={loading}>
               Cancel
             </Button>
             <Button type="submit" size="lg" className="h-11 gap-2 px-4" disabled={loading}>
