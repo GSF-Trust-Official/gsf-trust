@@ -266,7 +266,7 @@ export function ScholarshipClient({
                   <p className="text-xs font-semibold uppercase tracking-wider text-on-surface-variant">Poster</p>
                   <iframe
                     src={getDrivePreviewUrl(announcement.poster_drive_url)}
-                    className="w-full aspect-[3/4] rounded-lg border border-outline-variant"
+                    className="w-full aspect-3/4 rounded-lg border border-outline-variant"
                     allow="autoplay"
                     title="Scholarship Poster"
                   />

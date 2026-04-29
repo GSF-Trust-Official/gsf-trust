@@ -164,7 +164,7 @@ export function SubscriptionMatrix({ matrix, arrears, year, role, members }: Pro
               <thead>
                 <tr className="border-b border-outline-variant bg-surface-low">
                   {/* Sticky member column header */}
-                  <th className="sticky left-0 z-10 bg-surface-low px-4 py-3 text-left text-xs font-semibold uppercase tracking-widest text-on-surface-variant min-w-[140px] border-r border-outline-variant">
+                  <th className="sticky left-0 z-10 bg-surface-low px-4 py-3 text-left text-xs font-semibold uppercase tracking-widest text-on-surface-variant min-w-35 border-r border-outline-variant">
                     Member
                   </th>
                   {MONTHS_SHORT.map((m, i) => {
@@ -174,7 +174,7 @@ export function SubscriptionMatrix({ matrix, arrears, year, role, members }: Pro
                       <th
                         key={m}
                         className={cn(
-                          "px-1 py-2 text-xs font-semibold uppercase tracking-widest text-on-surface-variant min-w-[52px]",
+                          "px-1 py-2 text-xs font-semibold uppercase tracking-widest text-on-surface-variant min-w-13",
                           isCurrent && "bg-primary/5"
                         )}
                       >
@@ -211,7 +211,7 @@ export function SubscriptionMatrix({ matrix, arrears, year, role, members }: Pro
                   >
                     {/* Sticky member name */}
                     <td className="sticky left-0 z-10 bg-inherit px-4 py-2 border-r border-outline-variant">
-                      <p className="font-medium text-on-surface truncate max-w-[120px]">{row.member_name}</p>
+                      <p className="font-medium text-on-surface truncate max-w-30">{row.member_name}</p>
                       <p className="font-mono text-[11px] text-on-surface-variant">{row.member_code}</p>
                     </td>
 

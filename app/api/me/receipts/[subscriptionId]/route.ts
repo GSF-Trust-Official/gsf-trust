@@ -3,7 +3,7 @@
 import { NextResponse } from "next/server";
 import { getCloudflareContext } from "@opennextjs/cloudflare";
 import { getUserFromRequest } from "@/lib/auth";
-import { isMember, canWrite } from "@/lib/roles";
+import { isMember } from "@/lib/roles";
 import type { Subscription, Member } from "@/types";
 
 export async function GET(
