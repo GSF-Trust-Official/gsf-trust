@@ -46,7 +46,7 @@ function DialogContent({
       <DialogPrimitive.Popup
         data-slot="dialog-content"
         className={cn(
-          "fixed z-50 left-[50%] top-[50%] -translate-x-[50%] -translate-y-[50%]",
+          "fixed z-50 left-[50%] top-[50%] translate-x-[-50%] translate-y-[-50%]",
           "w-full max-w-lg max-h-[90dvh] overflow-y-auto",
           "rounded-2xl bg-white shadow-xl",
           "flex flex-col",

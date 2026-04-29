@@ -106,7 +106,7 @@ export default function MeScholarshipPage() {
             <div className="rounded-xl border border-outline-variant overflow-hidden bg-white">
               <iframe
                 src={getDrivePreviewUrl(announcement.poster_drive_url)}
-                className="w-full aspect-[3/4]"
+                className="w-full aspect-3/4"
                 allow="autoplay"
                 title="Scholarship Poster"
               />

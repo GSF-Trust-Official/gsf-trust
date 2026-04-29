@@ -102,7 +102,7 @@ export function PaymentsClient({ banking }: Props) {
             <div className="flex flex-col items-center gap-3">
               {/* eslint-disable-next-line @next/next/no-img-element */}
               <img src={qrDataUrl} alt="Scan to pay via UPI" width={200} height={200} className="rounded-xl border border-outline-variant" />
-              <p className="text-xs text-on-surface-variant text-center max-w-[200px]">
+              <p className="text-xs text-on-surface-variant text-center max-w-50">
                 Scan with any UPI app. Enter the amount yourself, then send a screenshot to the Treasurer.
               </p>
             </div>
