@@ -1,10 +1,13 @@
-export default function ReportsPage() {
-  return (
-    <div>
-      <h1 className="font-headline text-2xl font-bold text-on-surface mb-6">
-        Reports
-      </h1>
-      <p className="text-on-surface-variant">Coming in a future phase.</p>
-    </div>
-  );
+import { redirect } from "next/navigation";
+import { getSessionUser } from "@/lib/session";
+import { isMember } from "@/lib/roles";
+import { ReportsClient } from "@/components/reports/ReportsClient";
+
+export default async function ReportsPage() {
+  const user = await getSessionUser();
+  if (!user) redirect("/login");
+  if (user.mustChangePassword) redirect("/change-password");
+  if (isMember(user.role)) redirect("/me");
+
+  return <ReportsClient role={user.role} />;
 }
