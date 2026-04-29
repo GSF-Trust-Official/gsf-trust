@@ -9,5 +9,5 @@ export default async function ReportsPage() {
   if (user.mustChangePassword) redirect("/change-password");
   if (isMember(user.role)) redirect("/me");
 
-  return <ReportsClient role={user.role} />;
+  return <ReportsClient />;
 }

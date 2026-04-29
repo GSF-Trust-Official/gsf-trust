@@ -9,7 +9,6 @@ import { Button } from "@/components/ui/button";
 import { Input }  from "@/components/ui/input";
 import { Label }  from "@/components/ui/label";
 import { toast }  from "sonner";
-import type { UserRole } from "@/types";
 
 interface GeneratedReport {
   url:         string;
@@ -17,16 +16,48 @@ interface GeneratedReport {
   format:      "excel" | "pdf";
   title:       string;
   generatedAt: Date;
-  direct:      boolean; // true = auto-download, no link to show
+  direct:      boolean;
 }
 
-interface Props { role: UserRole }
+function ExcelBtn({
+  disabled,
+  loading,
+  onClick,
+}: {
+  disabled: boolean;
+  loading:  boolean;
+  onClick:  () => void;
+}) {
+  return (
+    <Button className="gap-2" disabled={disabled} onClick={onClick}>
+      {loading ? <Loader2 className="size-4 animate-spin" /> : <FileSpreadsheet className="size-4" />}
+      Generate Excel
+    </Button>
+  );
+}
+
+function PdfBtn({
+  disabled,
+  loading,
+  onClick,
+}: {
+  disabled: boolean;
+  loading:  boolean;
+  onClick:  () => void;
+}) {
+  return (
+    <Button variant="outline" className="gap-2" disabled={disabled} onClick={onClick}>
+      {loading ? <Loader2 className="size-4 animate-spin" /> : <FileText className="size-4" />}
+      Generate PDF
+    </Button>
+  );
+}
 
 function yearRange(year: number) {
   return { from: `${year}-01-01`, to: `${year}-12-31` };
 }
 
-export function ReportsClient({ role: _ }: Props) {
+export function ReportsClient() {
   const [annualYear,  setAnnualYear]  = useState(String(new Date().getFullYear()));
   const [customFrom,  setCustomFrom]  = useState("");
   const [customTo,    setCustomTo]    = useState("");
@@ -61,7 +92,6 @@ export function ReportsClient({ role: _ }: Props) {
       const ct = res.headers.get("Content-Type") ?? "";
 
       if (ct.includes("application/json")) {
-        // Drive URL — add to list
         const json = await res.json() as { url: string; filename: string };
         setReports((prev) => [
           {
@@ -73,7 +103,6 @@ export function ReportsClient({ role: _ }: Props) {
         ]);
         toast.success("Report generated and saved to Google Drive");
       } else {
-        // Direct download (Drive not configured in this env)
         const blob = await res.blob();
         const url  = URL.createObjectURL(blob);
         const cd   = res.headers.get("Content-Disposition") ?? "";
@@ -100,32 +129,10 @@ export function ReportsClient({ role: _ }: Props) {
     }
   }
 
-  const yearNum    = parseInt(annualYear, 10);
-  const annualOk   = !isNaN(yearNum) && yearNum >= 2020 && yearNum <= 2099;
+  const yearNum     = parseInt(annualYear, 10);
+  const annualOk    = !isNaN(yearNum) && yearNum >= 2020 && yearNum <= 2099;
   const annualRange = annualOk ? yearRange(yearNum) : null;
-  const customOk   = Boolean(customFrom && customTo && customFrom <= customTo);
-
-  function ExcelBtn({ disabled, onClick }: { disabled: boolean; onClick: () => void }) {
-    return (
-      <Button className="gap-2" disabled={disabled} onClick={onClick}>
-        {generating?.endsWith("-excel") && disabled
-          ? <Loader2 className="size-4 animate-spin" />
-          : <FileSpreadsheet className="size-4" />}
-        Generate Excel
-      </Button>
-    );
-  }
-
-  function PdfBtn({ disabled, onClick }: { disabled: boolean; onClick: () => void }) {
-    return (
-      <Button variant="outline" className="gap-2" disabled={disabled} onClick={onClick}>
-        {generating?.endsWith("-pdf") && disabled
-          ? <Loader2 className="size-4 animate-spin" />
-          : <FileText className="size-4" />}
-        Generate PDF
-      </Button>
-    );
-  }
+  const customOk    = Boolean(customFrom && customTo && customFrom <= customTo);
 
   return (
     <div className="max-w-7xl mx-auto px-4 md:px-8 py-6 space-y-6">
@@ -168,14 +175,16 @@ export function ReportsClient({ role: _ }: Props) {
 
         <div className="flex gap-3 flex-wrap">
           <ExcelBtn
-            disabled={!annualOk || generating === "annual-excel"}
+            disabled={!annualOk || generating !== null}
+            loading={generating === "annual-excel"}
             onClick={() => annualRange && generate({
               format: "excel", from: annualRange.from, to: annualRange.to,
               title: `Annual Report ${yearNum}`, key: "annual-excel",
             })}
           />
           <PdfBtn
-            disabled={!annualOk || generating === "annual-pdf"}
+            disabled={!annualOk || generating !== null}
+            loading={generating === "annual-pdf"}
             onClick={() => annualRange && generate({
               format: "pdf", from: annualRange.from, to: annualRange.to,
               title: `Annual Report ${yearNum}`, key: "annual-pdf",
@@ -218,14 +227,16 @@ export function ReportsClient({ role: _ }: Props) {
 
         <div className="flex gap-3 flex-wrap">
           <ExcelBtn
-            disabled={!customOk || generating === "custom-excel"}
+            disabled={!customOk || generating !== null}
+            loading={generating === "custom-excel"}
             onClick={() => generate({
               format: "excel", from: customFrom, to: customTo,
               title: `Report ${customFrom} to ${customTo}`, key: "custom-excel",
             })}
           />
           <PdfBtn
-            disabled={!customOk || generating === "custom-pdf"}
+            disabled={!customOk || generating !== null}
+            loading={generating === "custom-pdf"}
             onClick={() => generate({
               format: "pdf", from: customFrom, to: customTo,
               title: `Report ${customFrom} to ${customTo}`, key: "custom-pdf",
