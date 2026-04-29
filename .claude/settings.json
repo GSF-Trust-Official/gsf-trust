@@ -17,13 +17,18 @@
       "Bash(git commit -m 'fix: revert next.config.ts — initOpenNextCloudflareForDev import breaks Cloudflare build *)",
       "Bash(node -e \"const bcrypt = require\\('bcryptjs'\\); bcrypt.hash\\('GSFAbdulHaq@178', 12\\).then\\(h => console.log\\(h\\)\\);\")",
       "PowerShell(Copy-Item graphify-out/graph.json .graphify_old.json -ErrorAction SilentlyContinue)",
-      "PowerShell(Copy-Item graphify-out/graph.json .graphify_old.json)"
+      "PowerShell(Copy-Item graphify-out/graph.json .graphify_old.json)",
+      "Bash(node -e \"const p = require\\('./package.json'\\); console.log\\(Object.keys\\(p.dependencies\\).filter\\(k => k.includes\\('radix'\\)\\).join\\('\\\\n'\\)\\)\")",
+      "Bash(node -e \"const p = require\\('./package.json'\\); console.log\\(JSON.stringify\\(p.dependencies, null, 2\\)\\)\")",
+      "Bash(node -e \"const p = require\\('./package.json'\\); console.log\\(JSON.stringify\\(p.scripts, null, 2\\)\\)\")",
+      "Bash(npx next *)"
     ],
     "additionalDirectories": [
       "c:\\Users\\Muhammed suhaib\\Documents\\Everything\\GSF\\gsf-trust\\app\\api\\members",
       "c:\\Users\\Muhammed suhaib\\Documents\\Everything\\GSF\\gsf-trust\\app\\(app)\\members",
       "c:\\Users\\Muhammed suhaib\\Documents\\Everything\\GSF\\gsf-trust\\app\\api\\medical",
-      "c:\\Users\\Muhammed suhaib\\Documents\\Everything\\GSF\\gsf-trust\\app\\api\\scholarship\\announcement\\[id]"
+      "c:\\Users\\Muhammed suhaib\\Documents\\Everything\\GSF\\gsf-trust\\app\\api\\scholarship\\announcement\\[id]",
+      "c:\\Users\\Muhammed suhaib\\Documents\\Everything\\GSF\\gsf-trust\\app\\api\\admin\\registrations"
     ]
   }
 }
