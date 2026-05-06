@@ -24,6 +24,11 @@ const jetbrainsMono = JetBrains_Mono({
 export const metadata: Metadata = {
   title: "GSF Trust",
   description: "GSF Trust Accounts Management",
+  icons: {
+    icon: "/gsf-logo.png",
+    shortcut: "/gsf-logo.png",
+    apple: "/gsf-logo.png",
+  },
 };
 
 export default function RootLayout({
