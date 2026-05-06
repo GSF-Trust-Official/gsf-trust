@@ -91,6 +91,18 @@ export async function POST(
             { status: 404 }
           );
         }
+
+        // Prevent linking two user accounts to the same member.
+        const alreadyLinked = await env.DB
+          .prepare("SELECT id FROM users WHERE member_id = ? AND is_active = 1")
+          .bind(parsed.data.linked_member_id)
+          .first<{ id: string }>();
+        if (alreadyLinked) {
+          return NextResponse.json(
+            { error: "This member already has an active portal account." },
+            { status: 409 }
+          );
+        }
       }
 
       // Create the user account (must_change_password=1 until they set it via invite link).
