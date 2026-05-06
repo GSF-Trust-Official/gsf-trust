@@ -67,12 +67,18 @@ export async function POST(req: Request): Promise<NextResponse> {
     // Notify treasurer (fire-and-forget).
     const treasurerEmail = await getSetting(db, "treasurer_email");
     if (treasurerEmail) {
+      // Escape all user-supplied values before embedding in HTML.
+      const eName        = name.replace(/&/g,"&amp;").replace(/</g,"&lt;").replace(/>/g,"&gt;");
+      const eEmail       = email.replace(/&/g,"&amp;").replace(/</g,"&lt;").replace(/>/g,"&gt;");
+      const ePhone       = phone ? phone.replace(/&/g,"&amp;").replace(/</g,"&lt;").replace(/>/g,"&gt;") : "";
+      const eCode        = member_code ? member_code.replace(/&/g,"&amp;").replace(/</g,"&lt;").replace(/>/g,"&gt;") : "";
+      const eMessage     = message ? message.replace(/&/g,"&amp;").replace(/</g,"&lt;").replace(/>/g,"&gt;") : "";
       const html = `<p>A new registration request has been submitted.</p>
-<p><strong>Name:</strong> ${name}<br>
-<strong>Email:</strong> ${email}<br>
-${phone ? `<strong>Phone:</strong> ${phone}<br>` : ""}
-${member_code ? `<strong>Member Code:</strong> ${member_code}<br>` : ""}
-${message ? `<strong>Message:</strong> ${message}` : ""}</p>
+<p><strong>Name:</strong> ${eName}<br>
+<strong>Email:</strong> ${eEmail}<br>
+${ePhone ? `<strong>Phone:</strong> ${ePhone}<br>` : ""}
+${eCode ? `<strong>Member Code:</strong> ${eCode}<br>` : ""}
+${eMessage ? `<strong>Message:</strong> ${eMessage}` : ""}</p>
 <p>Log in to approve or reject: <a href="${process.env.NEXT_PUBLIC_APP_URL ?? "https://gsf-trust.gsftrust-official.workers.dev"}/settings">Settings → Pending Registrations</a></p>`;
 
       void sendEmail({

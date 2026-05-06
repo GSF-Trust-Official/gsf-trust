@@ -13,10 +13,12 @@ const THIRTY_WEEKS_MS = 30 * 7 * 24 * 60 * 60 * 1000;
 function escapeCSV(value: unknown): string {
   if (value === null || value === undefined) return "";
   const s = String(value);
-  if (s.includes(",") || s.includes('"') || s.includes("\n")) {
-    return `"${s.replace(/"/g, '""')}"`;
+  // Neutralize spreadsheet formula injection (=, +, -, @, tab, CR)
+  const safe = /^[=+\-@\t\r]/.test(s) ? `'${s}` : s;
+  if (safe.includes(",") || safe.includes('"') || safe.includes("\n")) {
+    return `"${safe.replace(/"/g, '""')}"`;
   }
-  return s;
+  return safe;
 }
 
 function rowsToCSV(rows: Record<string, unknown>[]): string {
@@ -143,15 +145,17 @@ async function runBackup(req: Request, isManual: boolean): Promise<Response> {
   return Response.json(result);
 }
 
-// Cron-triggered (GET from Cloudflare scheduler) or manual POST from admin
+// Cron-triggered (GET from Cloudflare scheduler)
+// BACKUP_SECRET must be configured — if unset the endpoint is disabled to prevent
+// any authenticated session from triggering it.
 export async function GET(req: Request): Promise<Response> {
-  // Cron: verify secret header set by wrangler cron (or custom header)
   const secret = process.env.BACKUP_SECRET;
-  if (secret) {
-    const auth = req.headers.get("Authorization");
-    if (auth !== `Bearer ${secret}`) {
-      return Response.json({ error: "Unauthorized" }, { status: 401 });
-    }
+  if (!secret) {
+    return Response.json({ error: "Backup secret not configured" }, { status: 503 });
+  }
+  const auth = req.headers.get("Authorization");
+  if (auth !== `Bearer ${secret}`) {
+    return Response.json({ error: "Unauthorized" }, { status: 401 });
   }
   return runBackup(req, false);
 }

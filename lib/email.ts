@@ -1,5 +1,15 @@
 import { Resend } from "resend";
 
+/** Escape characters that are special in HTML to prevent injection via user-supplied strings. */
+function escapeHtml(s: string): string {
+  return s
+    .replace(/&/g, "&amp;")
+    .replace(/</g, "&lt;")
+    .replace(/>/g, "&gt;")
+    .replace(/"/g, "&quot;")
+    .replace(/'/g, "&#39;");
+}
+
 const resend = new Resend(process.env.RESEND_API_KEY);
 
 interface SendReceiptParams {
@@ -61,7 +71,13 @@ function fmtINR(amount: number): string {
 }
 
 export function buildSubscriptionReceiptHtml(p: SubscriptionReceiptParams): string {
-  const ref = p.reference ? `<tr><td style="color:#3f4945;padding:6px 0;font-size:13px;">Reference</td><td style="padding:6px 0;font-size:13px;font-weight:600;">${p.reference}</td></tr>` : "";
+  const name  = escapeHtml(p.memberName);
+  const code  = escapeHtml(p.memberCode);
+  const month = escapeHtml(p.monthLabel);
+  const mode  = escapeHtml(p.mode);
+  const ref   = p.reference
+    ? `<tr><td style="color:#3f4945;padding:6px 0;font-size:13px;">Reference</td><td style="padding:6px 0;font-size:13px;font-weight:600;">${escapeHtml(p.reference)}</td></tr>`
+    : "";
   return `<!DOCTYPE html>
 <html>
 <head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"></head>
@@ -74,12 +90,12 @@ export function buildSubscriptionReceiptHtml(p: SubscriptionReceiptParams): stri
           <p style="margin:6px 0 0;color:#fff;font-size:20px;font-weight:700;">Payment Receipt</p>
         </td></tr>
         <tr><td style="padding:28px 32px;">
-          <p style="margin:0 0 20px;color:#191c1d;font-size:14px;">Dear <strong>${p.memberName}</strong>,<br>JazakAllah Khair for your payment.</p>
+          <p style="margin:0 0 20px;color:#191c1d;font-size:14px;">Dear <strong>${name}</strong>,<br>JazakAllah Khair for your payment.</p>
           <table width="100%" cellpadding="0" cellspacing="0" style="border-top:1px solid #edeeef;">
-            <tr><td style="color:#3f4945;padding:6px 0;font-size:13px;">Member Code</td><td style="padding:6px 0;font-size:13px;font-weight:600;">${p.memberCode}</td></tr>
-            <tr style="background:#f3f4f5;"><td style="color:#3f4945;padding:6px 8px;font-size:13px;">Payment For</td><td style="padding:6px 8px;font-size:13px;font-weight:600;">${p.monthLabel} Subscription</td></tr>
+            <tr><td style="color:#3f4945;padding:6px 0;font-size:13px;">Member Code</td><td style="padding:6px 0;font-size:13px;font-weight:600;">${code}</td></tr>
+            <tr style="background:#f3f4f5;"><td style="color:#3f4945;padding:6px 8px;font-size:13px;">Payment For</td><td style="padding:6px 8px;font-size:13px;font-weight:600;">${month} Subscription</td></tr>
             <tr><td style="color:#3f4945;padding:6px 0;font-size:13px;">Amount</td><td style="padding:6px 0;font-size:13px;font-weight:700;color:#0f7b5a;">${fmtINR(p.amount)}</td></tr>
-            <tr style="background:#f3f4f5;"><td style="color:#3f4945;padding:6px 8px;font-size:13px;">Payment Mode</td><td style="padding:6px 8px;font-size:13px;font-weight:600;text-transform:uppercase;">${p.mode}</td></tr>
+            <tr style="background:#f3f4f5;"><td style="color:#3f4945;padding:6px 8px;font-size:13px;">Payment Mode</td><td style="padding:6px 8px;font-size:13px;font-weight:600;text-transform:uppercase;">${mode}</td></tr>
             <tr><td style="color:#3f4945;padding:6px 0;font-size:13px;">Date</td><td style="padding:6px 0;font-size:13px;font-weight:600;">${fmtDate(p.paidDate)}</td></tr>
             ${ref}
           </table>
@@ -136,8 +152,16 @@ export interface DonationReceiptParams {
 
 export function buildDonationReceiptHtml(p: DonationReceiptParams): string {
   const typeLabel: Record<string, string> = { hadiya: "Hadiya", zakat: "Zakat", other: "Other Donation" };
-  const ref = p.reference ? `<tr><td style="color:#3f4945;padding:6px 0;font-size:13px;">Reference</td><td style="padding:6px 0;font-size:13px;font-weight:600;">${p.reference}</td></tr>` : "";
-  const code = p.memberCode ? `<tr style="background:#f3f4f5;"><td style="color:#3f4945;padding:6px 8px;font-size:13px;">Member Code</td><td style="padding:6px 8px;font-size:13px;font-weight:600;">${p.memberCode}</td></tr>` : "";
+  const donor = escapeHtml(p.donorName);
+  const ref   = p.reference
+    ? `<tr><td style="color:#3f4945;padding:6px 0;font-size:13px;">Reference</td><td style="padding:6px 0;font-size:13px;font-weight:600;">${escapeHtml(p.reference)}</td></tr>`
+    : "";
+  const code  = p.memberCode
+    ? `<tr style="background:#f3f4f5;"><td style="color:#3f4945;padding:6px 8px;font-size:13px;">Member Code</td><td style="padding:6px 8px;font-size:13px;font-weight:600;">${escapeHtml(p.memberCode)}</td></tr>`
+    : "";
+  const modeHtml = p.mode
+    ? `<tr><td style="color:#3f4945;padding:6px 0;font-size:13px;">Mode</td><td style="padding:6px 0;font-size:13px;font-weight:600;text-transform:uppercase;">${escapeHtml(p.mode)}</td></tr>`
+    : "";
   return `<!DOCTYPE html>
 <html>
 <head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"></head>
@@ -150,12 +174,12 @@ export function buildDonationReceiptHtml(p: DonationReceiptParams): string {
           <p style="margin:6px 0 0;color:#fff;font-size:20px;font-weight:700;">Donation Receipt</p>
         </td></tr>
         <tr><td style="padding:28px 32px;">
-          <p style="margin:0 0 20px;color:#191c1d;font-size:14px;">Dear <strong>${p.donorName}</strong>,<br>JazakAllah Khair for your generous contribution.</p>
+          <p style="margin:0 0 20px;color:#191c1d;font-size:14px;">Dear <strong>${donor}</strong>,<br>JazakAllah Khair for your generous contribution.</p>
           <table width="100%" cellpadding="0" cellspacing="0" style="border-top:1px solid #edeeef;">
             ${code}
-            <tr><td style="color:#3f4945;padding:6px 0;font-size:13px;">Donation Type</td><td style="padding:6px 0;font-size:13px;font-weight:600;">${typeLabel[p.type] ?? p.type}</td></tr>
+            <tr><td style="color:#3f4945;padding:6px 0;font-size:13px;">Donation Type</td><td style="padding:6px 0;font-size:13px;font-weight:600;">${escapeHtml(typeLabel[p.type] ?? p.type)}</td></tr>
             <tr style="background:#f3f4f5;"><td style="color:#3f4945;padding:6px 8px;font-size:13px;">Amount</td><td style="padding:6px 8px;font-size:13px;font-weight:700;color:#0f7b5a;">${fmtINR(p.amount)}</td></tr>
-            ${p.mode ? `<tr><td style="color:#3f4945;padding:6px 0;font-size:13px;">Mode</td><td style="padding:6px 0;font-size:13px;font-weight:600;text-transform:uppercase;">${p.mode}</td></tr>` : ""}
+            ${modeHtml}
             <tr${p.mode ? ' style="background:#f3f4f5;"' : ""}><td style="color:#3f4945;padding:6px 8px;font-size:13px;">Date</td><td style="padding:6px 8px;font-size:13px;font-weight:600;">${fmtDate(p.date)}</td></tr>
             ${ref}
           </table>

@@ -32,12 +32,18 @@ export async function POST(req: Request): Promise<NextResponse> {
 
     // Validate the one-time invite token.
     let userId: string;
+    let claimedTokenVersion: number;
     try {
       const { payload } = await jwtVerify(token, getSecret());
-      if (payload["purpose"] !== "set-password" || typeof payload["sub"] !== "string") {
+      if (
+        payload["purpose"] !== "set-password" ||
+        typeof payload["sub"] !== "string" ||
+        typeof payload["tokenVersion"] !== "number"
+      ) {
         throw new Error("invalid token");
       }
       userId = payload["sub"];
+      claimedTokenVersion = payload["tokenVersion"];
     } catch {
       return NextResponse.json({ error: "Invalid or expired invite link." }, { status: 400 });
     }
@@ -46,12 +52,31 @@ export async function POST(req: Request): Promise<NextResponse> {
     const db = env.DB;
 
     const user = await db
-      .prepare("SELECT id, role, name, token_version, member_id FROM users WHERE id = ? AND is_active = 1")
+      .prepare(
+        "SELECT id, role, name, token_version, must_change_password, member_id FROM users WHERE id = ? AND is_active = 1"
+      )
       .bind(userId)
-      .first<{ id: string; role: string; name: string; token_version: number; member_id: string | null }>();
+      .first<{
+        id: string;
+        role: string;
+        name: string;
+        token_version: number;
+        must_change_password: number;
+        member_id: string | null;
+      }>();
 
     if (!user) {
       return NextResponse.json({ error: "Account not found." }, { status: 404 });
+    }
+
+    // Enforce one-time use: token_version in JWT must match DB value.
+    if (claimedTokenVersion !== user.token_version) {
+      return NextResponse.json({ error: "This invite link has already been used." }, { status: 400 });
+    }
+
+    // Only allow set-password flow for accounts that are pending activation.
+    if (!user.must_change_password) {
+      return NextResponse.json({ error: "This invite link is no longer valid." }, { status: 400 });
     }
 
     const newHash = await hashPassword(password);

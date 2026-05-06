@@ -82,20 +82,9 @@ export async function uploadToDrive(
 
   const { id: fileId } = (await uploadRes.json()) as { id: string };
 
-  // Make the file readable by anyone with the link
-  await fetch(
-    `https://www.googleapis.com/drive/v3/files/${fileId}/permissions`,
-    {
-      method:  "POST",
-      headers: {
-        Authorization:  `Bearer ${token}`,
-        "Content-Type": "application/json",
-      },
-      body: JSON.stringify({ role: "reader", type: "anyone" }),
-    }
-  );
-
-  return `https://drive.google.com/uc?export=download&id=${fileId}`;
+  // Files are private — access is controlled by folder sharing on the Foundation's
+  // Google Drive account. No public permission is granted.
+  return `https://drive.google.com/file/d/${fileId}/view`;
 }
 
 export function isDriveConfigured(env: {

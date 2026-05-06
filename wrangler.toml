@@ -1,7 +1,7 @@
 name = "gsf-trust"
 compatibility_date = "2024-09-23"
 compatibility_flags = ["nodejs_compat"]
-workers_dev = true
+workers_dev = false
 
 main = ".open-next/worker.js"
 

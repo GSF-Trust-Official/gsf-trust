@@ -151,7 +151,7 @@ export function RegistrationRequestsPanel({ members }: Props) {
                           size="sm"
                           className="gap-1.5 flex-1"
                           disabled={acting === r.id}
-                          onClick={() => approve(r.id)}
+                          onClick={() => { void approve(r.id); }}
                         >
                           <Check className="size-3.5" />
                           Approve & Invite
@@ -161,7 +161,7 @@ export function RegistrationRequestsPanel({ members }: Props) {
                           variant="outline"
                           className="gap-1.5 flex-1 border-error text-error hover:bg-error-container"
                           disabled={acting === r.id}
-                          onClick={() => reject(r.id)}
+                          onClick={() => { void reject(r.id); }}
                         >
                           <X className="size-3.5" />
                           Reject
