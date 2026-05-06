@@ -56,7 +56,7 @@ export function LoginForm() {
   return (
     <form onSubmit={handleSubmit(onSubmit)} noValidate className="space-y-5">
       <div className="space-y-1.5">
-        <Label htmlFor="email">Email</Label>
+        <Label htmlFor="email" className="text-xs font-semibold uppercase tracking-widest text-on-surface-variant">Email address</Label>
         <Input
           id="email"
           type="email"
@@ -74,7 +74,7 @@ export function LoginForm() {
       </div>
 
       <div className="space-y-1.5">
-        <Label htmlFor="password">Password</Label>
+        <Label htmlFor="password" className="text-xs font-semibold uppercase tracking-widest text-on-surface-variant">Password</Label>
         <div className="relative">
           <Input
             id="password"
