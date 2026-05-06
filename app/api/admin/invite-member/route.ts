@@ -41,12 +41,21 @@ export async function POST(req: Request): Promise<NextResponse> {
       return NextResponse.json({ error: "Member has no email address on file." }, { status: 422 });
     }
 
-    // Check no existing active account.
+    // Check no existing active account by email.
     const existing = await env.DB
       .prepare("SELECT id FROM users WHERE email = ? AND is_active = 1")
       .bind(member.email)
       .first<{ id: string }>();
     if (existing) {
+      return NextResponse.json({ error: "A portal account for this member already exists." }, { status: 409 });
+    }
+
+    // Check no other user is already linked to this member record.
+    const alreadyLinked = await env.DB
+      .prepare("SELECT id FROM users WHERE member_id = ? AND is_active = 1")
+      .bind(member.id)
+      .first<{ id: string }>();
+    if (alreadyLinked) {
       return NextResponse.json({ error: "A portal account for this member already exists." }, { status: 409 });
     }
 
