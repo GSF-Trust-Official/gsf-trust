@@ -24,7 +24,8 @@
       "Bash(npx next *)",
       "PowerShell(Set-Location \"c:\\\\Users\\\\Muhammed suhaib\\\\Documents\\\\Everything\\\\GSF\\\\gsf-trust\"; \\(Get-Content package.json | Select-String '\"build\"'\\) -join \"`n\")",
       "PowerShell(Set-Location \"c:\\\\Users\\\\Muhammed suhaib\\\\Documents\\\\Everything\\\\GSF\\\\gsf-trust\"; \\(Get-ChildItem \".next/types\" -Recurse -File\\).Count)",
-      "Bash(mkdir -p \"C:\\\\Users\\\\Muhammed suhaib\\\\Documents\\\\Everything\\\\GSF\\\\gsf-trust\\\\graphify-out\" 2>/dev/null; echo \"done\")"
+      "Bash(mkdir -p \"C:\\\\Users\\\\Muhammed suhaib\\\\Documents\\\\Everything\\\\GSF\\\\gsf-trust\\\\graphify-out\" 2>/dev/null; echo \"done\")",
+      "PowerShell(Copy-Item \"c:\\\\Users\\\\Muhammed suhaib\\\\Documents\\\\Everything\\\\GSF\\\\gsf-trust\\\\public\\\\gsf-logo.png\" \"c:\\\\Users\\\\Muhammed suhaib\\\\Documents\\\\Everything\\\\GSF\\\\gsf-trust\\\\app\\\\icon.png\" -Force)"
     ],
     "additionalDirectories": [
       "c:\\Users\\Muhammed suhaib\\Documents\\Everything\\GSF\\gsf-trust\\app\\api\\members",

@@ -1,6 +1,7 @@
 "use client";
 
 import { useState, Suspense } from "react";
+import Image from "next/image";
 import { useRouter, useSearchParams } from "next/navigation";
 import { toast } from "sonner";
 import { Eye, EyeOff } from "lucide-react";
@@ -38,7 +39,6 @@ function SetPasswordForm() {
       const data = await res.json() as { ok?: boolean; role?: string; error?: string };
       if (!res.ok) { toast.error(data.error ?? "Failed to set password"); return; }
       toast.success("Password set — welcome!");
-      // Redirect member role to /me, others to /dashboard.
       router.replace(data.role === "member" ? "/me" : "/dashboard");
     } catch {
       toast.error("Something went wrong");
@@ -56,9 +56,11 @@ function SetPasswordForm() {
   }
 
   return (
-    <form onSubmit={handleSubmit} className="space-y-4">
+    <form onSubmit={handleSubmit} className="space-y-5">
       <div className="space-y-1.5">
-        <Label htmlFor="password">New Password</Label>
+        <Label htmlFor="password" className="text-xs font-semibold uppercase tracking-widest text-on-surface-variant">
+          New Password
+        </Label>
         <div className="relative">
           <Input
             id="password"
@@ -73,15 +75,18 @@ function SetPasswordForm() {
           <button
             type="button"
             onClick={() => setShow((v) => !v)}
-            className="absolute right-3 top-1/2 -translate-y-1/2 text-on-surface-variant"
+            className="absolute right-3 top-1/2 -translate-y-1/2 text-on-surface-variant hover:text-on-surface"
             aria-label={show ? "Hide password" : "Show password"}
           >
             {show ? <EyeOff className="size-4" /> : <Eye className="size-4" />}
           </button>
         </div>
       </div>
+
       <div className="space-y-1.5">
-        <Label htmlFor="confirm">Confirm Password</Label>
+        <Label htmlFor="confirm" className="text-xs font-semibold uppercase tracking-widest text-on-surface-variant">
+          Confirm Password
+        </Label>
         <Input
           id="confirm"
           type={show ? "text" : "password"}
@@ -91,7 +96,12 @@ function SetPasswordForm() {
           required
         />
       </div>
-      <Button type="submit" className="w-full" disabled={loading}>
+
+      <Button
+        type="submit"
+        disabled={loading}
+        className="w-full h-11 bg-primary hover:bg-primary-container text-white font-semibold"
+      >
         {loading ? "Setting password…" : "Set Password & Log In"}
       </Button>
     </form>
@@ -100,17 +110,51 @@ function SetPasswordForm() {
 
 export default function SetPasswordPage() {
   return (
-    <div className="min-h-screen flex items-center justify-center bg-surface-low px-4">
-      <div className="w-full max-w-sm rounded-2xl border border-outline-variant bg-white p-8 space-y-6">
-        <div>
-          <h1 className="text-2xl font-headline font-bold text-on-surface">Set Your Password</h1>
-          <p className="text-sm text-on-surface-variant mt-1">
-            Create a secure password to access the GSF Trust member portal.
-          </p>
+    <div className="min-h-screen flex">
+      {/* Left branding panel */}
+      <div className="hidden lg:flex lg:w-[52%] bg-primary flex-col items-center justify-center p-14 relative overflow-hidden">
+        <div className="absolute top-10 left-10 w-36 h-36 rounded-3xl bg-white/5" />
+        <div className="absolute bottom-16 right-10 w-52 h-52 rounded-3xl bg-white/5" />
+        <div className="absolute top-1/2 right-6 w-24 h-24 rounded-2xl bg-white/5" />
+        <div className="absolute top-20 right-1/3 w-16 h-16 rounded-xl bg-white/5" />
+        <div className="relative z-10 flex flex-col items-center text-center max-w-xs space-y-7">
+          <div className="p-2 bg-white/10 rounded-3xl backdrop-blur-sm">
+            <Image src="/gsf-logo.png" alt="GSF Trust" width={148} height={148} className="rounded-2xl" priority />
+          </div>
+          <div className="space-y-3">
+            <h1 className="font-headline font-bold text-3xl text-white leading-snug">GSF Trust</h1>
+            <p className="text-primary-fixed-dim text-sm leading-relaxed">
+              Secure financial management for the Foundation's accounts, subscriptions, and fund tracking.
+            </p>
+          </div>
         </div>
-        <Suspense fallback={<p className="text-sm text-on-surface-variant">Loading…</p>}>
-          <SetPasswordForm />
-        </Suspense>
+      </div>
+
+      {/* Right panel — set password form */}
+      <div className="flex-1 flex flex-col bg-white">
+        <div className="flex-1 flex flex-col items-center justify-center px-8 py-12">
+          {/* Mobile logo */}
+          <div className="lg:hidden flex flex-col items-center mb-10 space-y-3">
+            <Image src="/gsf-logo.png" alt="GSF Trust" width={72} height={72} className="rounded-2xl shadow-md" priority />
+            <h1 className="font-headline font-bold text-xl text-on-surface">GSF Trust</h1>
+          </div>
+
+          <div className="w-full max-w-sm space-y-8">
+            <div>
+              <h2 className="font-headline font-bold text-3xl text-on-surface">Set Your Password</h2>
+              <p className="text-on-surface-variant mt-1.5 text-sm">
+                Create a secure password to access the GSF Trust portal.
+              </p>
+            </div>
+            <Suspense fallback={<p className="text-sm text-on-surface-variant">Loading…</p>}>
+              <SetPasswordForm />
+            </Suspense>
+          </div>
+        </div>
+
+        <p className="text-center text-xs text-on-surface-variant pb-6">
+          © {new Date().getFullYear()} GSF Trust · All rights reserved
+        </p>
       </div>
     </div>
   );
