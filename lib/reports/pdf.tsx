@@ -69,7 +69,7 @@ function SummaryPage({ data, title }: { data: ReportData; title: string }) {
   return (
     <Page size="A4" style={styles.page}>
       <View style={styles.header}>
-        <Text style={styles.title}>GSF Foundation</Text>
+        <Text style={styles.title}>GSF Trust</Text>
         <Text style={[styles.title, { fontSize: 12, marginTop: 2 }]}>{title}</Text>
         <Text style={styles.subtitle}>
           Period: {filters.from} → {filters.to} · Generated {new Date().toLocaleDateString("en-IN")}
@@ -141,7 +141,7 @@ function SummaryPage({ data, title }: { data: ReportData; title: string }) {
       )}
 
       <Text style={styles.footer}>
-        System-generated report · GSF Foundation · Confidential · Do not distribute
+        System-generated report · GSF Trust · Confidential · Do not distribute
       </Text>
     </Page>
   );
@@ -176,7 +176,7 @@ function ScholarshipPage({ data, filters }: { data: ReportData; filters: { from:
         Total: − {fmtINR((data.scholarshipPayouts as Array<Record<string, unknown>>).reduce((sum, p) => sum + n(p.amount), 0))}
       </Text>
       <Text style={styles.footer}>
-        System-generated report · GSF Foundation · Confidential
+        System-generated report · GSF Trust · Confidential
       </Text>
     </Page>
   );
@@ -212,7 +212,7 @@ function MedicalPage({ data, filters }: { data: ReportData; filters: { from: str
         </View>
       ))}
       <Text style={styles.footer}>
-        System-generated report · GSF Foundation · Confidential
+        System-generated report · GSF Trust · Confidential
       </Text>
     </Page>
   );
@@ -221,7 +221,7 @@ function MedicalPage({ data, filters }: { data: ReportData; filters: { from: str
 // ─── Root document ────────────────────────────────────────────────────────────
 function ReportDocument({ data, title }: { data: ReportData; title: string }) {
   return (
-    <Document title={`GSF Foundation — ${title}`} author="GSF Foundation">
+    <Document title={`GSF Trust — ${title}`} author="GSF Trust">
       <SummaryPage data={data} title={title} />
       <ScholarshipPage data={data} filters={data.filters} />
       <MedicalPage data={data} filters={data.filters} />

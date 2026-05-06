@@ -34,7 +34,7 @@ export default function MeScholarshipPage() {
     <div className="space-y-6">
       <div>
         <h1 className="text-2xl font-headline font-bold text-on-surface">Scholarship</h1>
-        <p className="text-sm text-on-surface-variant mt-0.5">Current scholarship opportunities from GSF Foundation</p>
+        <p className="text-sm text-on-surface-variant mt-0.5">Current scholarship opportunities from GSF Trust</p>
       </div>
 
       {!announcement ? (

@@ -105,7 +105,7 @@ export default function SetPasswordPage() {
         <div>
           <h1 className="text-2xl font-headline font-bold text-on-surface">Set Your Password</h1>
           <p className="text-sm text-on-surface-variant mt-1">
-            Create a secure password to access the GSF Foundation member portal.
+            Create a secure password to access the GSF Trust member portal.
           </p>
         </div>
         <Suspense fallback={<p className="text-sm text-on-surface-variant">Loading…</p>}>

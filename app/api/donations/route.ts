@@ -102,7 +102,7 @@ export async function POST(req: Request): Promise<NextResponse> {
       if (enabled !== "0") {
         void sendReceipt({
           to:      memberEmail,
-          subject: "Donation Receipt — GSF Foundation",
+          subject: "Donation Receipt — GSF Trust",
           html:    buildDonationReceiptHtml(receiptParams),
           text:    buildDonationReceiptText(receiptParams),
         });
