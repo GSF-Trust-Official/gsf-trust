@@ -135,14 +135,14 @@ export async function POST(
       const safeName    = request.name.replace(/&/g,"&amp;").replace(/</g,"&lt;").replace(/>/g,"&gt;");
       void sendEmail({
         to: request.email,
-        subject: "Your GSF Foundation account is ready",
+        subject: "Your GSF Trust account is ready",
         html: `<p>Assalamu Alaikum ${safeName},</p>
 <p>Your registration has been approved. Please set your password using the link below:</p>
 <p><a href="${inviteUrl}">Set Your Password</a></p>
 <p>This link expires in 48 hours.</p>
 <p>Once logged in, you can view your subscription history, outstanding dues, and download payment receipts.</p>
-<p>JazakAllah Khair,<br>GSF Foundation</p>`,
-        text: `Assalamu Alaikum ${request.name},\n\nYour registration has been approved.\n\nSet your password here: ${inviteUrl}\n\nThis link expires in 48 hours.\n\nJazakAllah Khair,\nGSF Foundation`,
+<p>JazakAllah Khair,<br>GSF Trust</p>`,
+        text: `Assalamu Alaikum ${request.name},\n\nYour registration has been approved.\n\nSet your password here: ${inviteUrl}\n\nThis link expires in 48 hours.\n\nJazakAllah Khair,\nGSF Trust`,
       });
 
       return NextResponse.json({ ok: true, user_id: newUserId });
@@ -170,13 +170,13 @@ export async function POST(
         : null;
       void sendEmail({
         to: request.email,
-        subject: "GSF Foundation — Registration Update",
+        subject: "GSF Trust — Registration Update",
         html: `<p>Assalamu Alaikum ${rejectName},</p>
-<p>Thank you for your interest in the GSF Foundation member portal.</p>
+<p>Thank you for your interest in the GSF Trust member portal.</p>
 <p>After review, we were unable to approve your registration at this time.${rejectReason ? ` Reason: ${rejectReason}` : ""}</p>
 <p>If you believe this is an error, please contact the Treasurer directly.</p>
-<p>JazakAllah Khair,<br>GSF Foundation</p>`,
-        text: `Assalamu Alaikum ${request.name},\n\nWe were unable to approve your registration at this time.${parsed.data.rejection_reason ? `\nReason: ${parsed.data.rejection_reason}` : ""}\n\nJazakAllah Khair,\nGSF Foundation`,
+<p>JazakAllah Khair,<br>GSF Trust</p>`,
+        text: `Assalamu Alaikum ${request.name},\n\nWe were unable to approve your registration at this time.${parsed.data.rejection_reason ? `\nReason: ${parsed.data.rejection_reason}` : ""}\n\nJazakAllah Khair,\nGSF Trust`,
       });
 
       return NextResponse.json({ ok: true });

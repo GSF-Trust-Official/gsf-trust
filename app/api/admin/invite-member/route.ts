@@ -87,14 +87,14 @@ export async function POST(req: Request): Promise<NextResponse> {
     const safeName   = member.name.replace(/&/g,"&amp;").replace(/</g,"&lt;").replace(/>/g,"&gt;");
     void sendEmail({
       to: member.email,
-      subject: "Your GSF Foundation account is ready",
+      subject: "Your GSF Trust account is ready",
       html: `<p>Assalamu Alaikum ${safeName},</p>
-<p>You have been invited to the GSF Foundation member portal. Please set your password using the link below:</p>
+<p>You have been invited to the GSF Trust member portal. Please set your password using the link below:</p>
 <p><a href="${inviteUrl}">Set Your Password</a></p>
 <p>This link expires in 48 hours.</p>
 <p>Once logged in, you can view your subscription history, outstanding dues, and download payment receipts.</p>
-<p>JazakAllah Khair,<br>GSF Foundation</p>`,
-      text: `Assalamu Alaikum ${member.name},\n\nYou have been invited to the GSF Foundation member portal.\n\nSet your password here: ${inviteUrl}\n\nThis link expires in 48 hours.\n\nJazakAllah Khair,\nGSF Foundation`,
+<p>JazakAllah Khair,<br>GSF Trust</p>`,
+      text: `Assalamu Alaikum ${member.name},\n\nYou have been invited to the GSF Trust member portal.\n\nSet your password here: ${inviteUrl}\n\nThis link expires in 48 hours.\n\nJazakAllah Khair,\nGSF Trust`,
     });
 
     return NextResponse.json({ ok: true });

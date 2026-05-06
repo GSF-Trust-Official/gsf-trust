@@ -34,7 +34,7 @@ export function generateExcel(data: ReportData, title: string): Uint8Array {
 
   // ── Summary ──────────────────────────────────────────────────────────────
   const summaryRows = [
-    [`GSF Foundation — ${title}`],
+    [`GSF Trust — ${title}`],
     [`Generated on`, new Date().toLocaleDateString("en-IN")],
     [`Period`, `${filters.from}  →  ${filters.to}`],
     [],

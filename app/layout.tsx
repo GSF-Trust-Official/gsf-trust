@@ -22,8 +22,8 @@ const jetbrainsMono = JetBrains_Mono({
 });
 
 export const metadata: Metadata = {
-  title: "GSF Foundation",
-  description: "GSF Foundation Accounts Management",
+  title: "GSF Trust",
+  description: "GSF Trust Accounts Management",
 };
 
 export default function RootLayout({

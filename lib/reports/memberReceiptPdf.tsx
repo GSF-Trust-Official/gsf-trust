@@ -40,7 +40,7 @@ export function MemberReceiptDocument({ sub, member, receiptNo, monthLabel }: Re
     <Document>
       <Page size="A4" style={styles.page}>
         <View style={styles.header}>
-          <Text style={styles.title}>GSF Foundation</Text>
+          <Text style={styles.title}>GSF Trust</Text>
           <Text style={styles.sub}>PAYMENT RECEIPT</Text>
         </View>
 
@@ -87,7 +87,7 @@ export function MemberReceiptDocument({ sub, member, receiptNo, monthLabel }: Re
         <Text style={styles.stamp}>✓ PAID</Text>
 
         <Text style={styles.footer}>
-          System-generated receipt · GSF Foundation · {new Date().getFullYear()}
+          System-generated receipt · GSF Trust · {new Date().getFullYear()}
         </Text>
       </Page>
     </Document>

@@ -26,7 +26,7 @@ export async function sendReceipt(
 ): Promise<{ ok: boolean; error?: string }> {
   try {
     await resend.emails.send({
-      from: "GSF Foundation <onboarding@resend.dev>",
+      from: "GSF Trust <onboarding@resend.dev>",
       to: params.to,
       subject: params.subject,
       html: params.html,
@@ -86,7 +86,7 @@ export function buildSubscriptionReceiptHtml(p: SubscriptionReceiptParams): stri
     <tr><td>
       <table width="100%" cellpadding="0" cellspacing="0" style="max-width:520px;margin:0 auto;background:#fff;border-radius:12px;overflow:hidden;">
         <tr><td style="background:#004235;padding:28px 32px;">
-          <p style="margin:0;color:#a7f1da;font-size:12px;letter-spacing:1px;text-transform:uppercase;">GSF Foundation</p>
+          <p style="margin:0;color:#a7f1da;font-size:12px;letter-spacing:1px;text-transform:uppercase;">GSF Trust</p>
           <p style="margin:6px 0 0;color:#fff;font-size:20px;font-weight:700;">Payment Receipt</p>
         </td></tr>
         <tr><td style="padding:28px 32px;">
@@ -102,7 +102,7 @@ export function buildSubscriptionReceiptHtml(p: SubscriptionReceiptParams): stri
           <p style="margin:24px 0 0;font-size:12px;color:#3f4945;">This is a system-generated receipt. For queries, contact the Treasurer.</p>
         </td></tr>
         <tr><td style="background:#edeeef;padding:16px 32px;text-align:center;">
-          <p style="margin:0;font-size:11px;color:#3f4945;">GSF Foundation · Confidential</p>
+          <p style="margin:0;font-size:11px;color:#3f4945;">GSF Trust · Confidential</p>
         </td></tr>
       </table>
     </td></tr>
@@ -112,7 +112,7 @@ export function buildSubscriptionReceiptHtml(p: SubscriptionReceiptParams): stri
 }
 
 export function buildSubscriptionReceiptText(p: SubscriptionReceiptParams): string {
-  return `GSF Foundation — Payment Receipt
+  return `GSF Trust — Payment Receipt
 
 Dear ${p.memberName},
 
@@ -130,12 +130,12 @@ Date:           ${fmtDate(p.paidDate)}${p.reference ? `\nReference:      ${p.ref
 This is a system-generated receipt.
 For queries, contact the Treasurer.
 
-GSF Foundation`;
+GSF Trust`;
 }
 
 export function buildSubscriptionReceiptWhatsApp(p: SubscriptionReceiptParams): string {
   const ref = p.reference ? `\nRef: ${p.reference}` : "";
-  return `*GSF Foundation — Payment Receipt*\n\nMember: ${p.memberName} (Code: ${p.memberCode})\nPayment: ${p.monthLabel} Subscription\nAmount: ${fmtINR(p.amount)}\nMode: ${p.mode.toUpperCase()}${ref}\nDate: ${fmtDate(p.paidDate)}\n\n_JazakAllah Khair_`;
+  return `*GSF Trust — Payment Receipt*\n\nMember: ${p.memberName} (Code: ${p.memberCode})\nPayment: ${p.monthLabel} Subscription\nAmount: ${fmtINR(p.amount)}\nMode: ${p.mode.toUpperCase()}${ref}\nDate: ${fmtDate(p.paidDate)}\n\n_JazakAllah Khair_`;
 }
 
 // ─── Donation receipt ──────────────────────────────────────────────────────────
@@ -170,7 +170,7 @@ export function buildDonationReceiptHtml(p: DonationReceiptParams): string {
     <tr><td>
       <table width="100%" cellpadding="0" cellspacing="0" style="max-width:520px;margin:0 auto;background:#fff;border-radius:12px;overflow:hidden;">
         <tr><td style="background:#004235;padding:28px 32px;">
-          <p style="margin:0;color:#a7f1da;font-size:12px;letter-spacing:1px;text-transform:uppercase;">GSF Foundation</p>
+          <p style="margin:0;color:#a7f1da;font-size:12px;letter-spacing:1px;text-transform:uppercase;">GSF Trust</p>
           <p style="margin:6px 0 0;color:#fff;font-size:20px;font-weight:700;">Donation Receipt</p>
         </td></tr>
         <tr><td style="padding:28px 32px;">
@@ -186,7 +186,7 @@ export function buildDonationReceiptHtml(p: DonationReceiptParams): string {
           <p style="margin:24px 0 0;font-size:12px;color:#3f4945;">This is a system-generated receipt. For queries, contact the Treasurer.</p>
         </td></tr>
         <tr><td style="background:#edeeef;padding:16px 32px;text-align:center;">
-          <p style="margin:0;font-size:11px;color:#3f4945;">GSF Foundation · Confidential</p>
+          <p style="margin:0;font-size:11px;color:#3f4945;">GSF Trust · Confidential</p>
         </td></tr>
       </table>
     </td></tr>
@@ -197,7 +197,7 @@ export function buildDonationReceiptHtml(p: DonationReceiptParams): string {
 
 export function buildDonationReceiptText(p: DonationReceiptParams): string {
   const typeLabel: Record<string, string> = { hadiya: "Hadiya", zakat: "Zakat", other: "Other Donation" };
-  return `GSF Foundation — Donation Receipt
+  return `GSF Trust — Donation Receipt
 
 Dear ${p.donorName},
 
@@ -213,14 +213,14 @@ Date:           ${fmtDate(p.date)}${p.reference ? `\nReference:      ${p.referen
 This is a system-generated receipt.
 For queries, contact the Treasurer.
 
-GSF Foundation`;
+GSF Trust`;
 }
 
 export function buildDonationReceiptWhatsApp(p: DonationReceiptParams): string {
   const typeLabel: Record<string, string> = { hadiya: "Hadiya", zakat: "Zakat", other: "Donation" };
   const ref  = p.reference ? `\nRef: ${p.reference}` : "";
   const mode = p.mode      ? ` · ${p.mode.toUpperCase()}` : "";
-  return `*GSF Foundation — Donation Receipt*\n\nDonor: ${p.donorName}${p.memberCode ? ` (Code: ${p.memberCode})` : ""}\nType: ${typeLabel[p.type] ?? p.type}\nAmount: ${fmtINR(p.amount)}${mode}${ref}\nDate: ${fmtDate(p.date)}\n\n_JazakAllah Khair_`;
+  return `*GSF Trust — Donation Receipt*\n\nDonor: ${p.donorName}${p.memberCode ? ` (Code: ${p.memberCode})` : ""}\nType: ${typeLabel[p.type] ?? p.type}\nAmount: ${fmtINR(p.amount)}${mode}${ref}\nDate: ${fmtDate(p.date)}\n\n_JazakAllah Khair_`;
 }
 
 // ─── Backup confirmation email ─────────────────────────────────────────────────
@@ -243,7 +243,7 @@ export function buildBackupConfirmationHtml(p: BackupConfirmationParams): string
   return `<!DOCTYPE html><html><body style="font-family:Inter,Arial,sans-serif;background:#f3f4f5;margin:0;padding:32px 16px;">
 <table style="max-width:520px;margin:0 auto;background:#fff;border-radius:12px;overflow:hidden;">
 <tr><td style="background:#004235;padding:24px 32px;">
-  <p style="margin:0;color:#a7f1da;font-size:12px;letter-spacing:1px;text-transform:uppercase;">GSF Foundation</p>
+  <p style="margin:0;color:#a7f1da;font-size:12px;letter-spacing:1px;text-transform:uppercase;">GSF Trust</p>
   <p style="margin:6px 0 0;color:#fff;font-size:18px;font-weight:700;">Weekly Backup Complete ✓</p>
 </td></tr>
 <tr><td style="padding:24px 32px;">
@@ -260,7 +260,7 @@ export function buildBackupConfirmationText(p: BackupConfirmationParams): string
   const rows = Object.entries(p.rowCounts)
     .map(([table, count]) => `  ${table}: ${count.toLocaleString("en-IN")} rows`)
     .join("\n");
-  return `GSF Foundation — Weekly Backup Complete
+  return `GSF Trust — Weekly Backup Complete
 
 Date: ${p.date}
 Files uploaded: ${p.fileCount}
@@ -271,5 +271,5 @@ ${p.driveUrl ? `\nView in Drive: ${p.driveUrl}` : ""}
 
 This is an automated message. Backups older than 30 weeks are automatically deleted.
 
-GSF Foundation`;
+GSF Trust`;
 }

@@ -125,7 +125,7 @@ async function runBackup(req: Request, isManual: boolean): Promise<Response> {
     };
     void sendReceipt({
       to:      treasurerEmail,
-      subject: `GSF Foundation — Weekly Backup Complete (${dateStr})`,
+      subject: `GSF Trust — Weekly Backup Complete (${dateStr})`,
       html:    buildBackupConfirmationHtml(params),
       text:    buildBackupConfirmationText(params),
     });

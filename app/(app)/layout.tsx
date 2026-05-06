@@ -1,3 +1,4 @@
+import Image from "next/image";
 import { redirect } from "next/navigation";
 import { getSessionUser } from "@/lib/session";
 import { NavLinks } from "@/components/layout/NavLinks";
@@ -17,9 +18,10 @@ export default async function AppLayout({
     <div className="flex min-h-screen bg-surface-low">
       {/* Desktop sidebar — fixed, 18rem wide, xl+ only */}
       <aside className="hidden xl:flex xl:flex-col xl:fixed xl:inset-y-0 xl:w-72 bg-white border-r border-outline-variant">
-        <div className="flex items-center h-16 px-6 border-b border-outline-variant shrink-0">
-          <span className="font-headline font-bold text-primary text-lg">
-            GSF Foundation
+        <div className="flex items-center gap-3 h-16 px-5 border-b border-outline-variant shrink-0">
+          <Image src="/gsf-logo.png" alt="" width={36} height={36} className="rounded-xl shrink-0" />
+          <span className="font-headline font-bold text-primary text-lg leading-tight">
+            GSF Trust
           </span>
         </div>
 

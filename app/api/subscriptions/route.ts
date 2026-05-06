@@ -91,7 +91,7 @@ export async function POST(req: Request): Promise<NextResponse> {
       if (enabled !== "0") {
         void sendReceipt({
           to:      member.email,
-          subject: `Payment Receipt — GSF Foundation (${monthLabel})`,
+          subject: `Payment Receipt — GSF Trust (${monthLabel})`,
           html:    buildSubscriptionReceiptHtml(receiptParams),
           text:    buildSubscriptionReceiptText(receiptParams),
         });

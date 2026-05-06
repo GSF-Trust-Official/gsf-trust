@@ -23,7 +23,7 @@ export function PaymentsClient({ banking }: Props) {
 
   useEffect(() => {
     if (!upiId) return;
-    const upiUrl = `upi://pay?pa=${encodeURIComponent(upiId)}&pn=${encodeURIComponent("GSF Foundation")}&cu=INR`;
+    const upiUrl = `upi://pay?pa=${encodeURIComponent(upiId)}&pn=${encodeURIComponent("GSF Trust")}&cu=INR`;
     QRCode.toDataURL(upiUrl, { width: 240, margin: 2, color: { dark: "#004235", light: "#ffffff" } })
       .then(setQrDataUrl)
       .catch(() => setQrDataUrl(null));

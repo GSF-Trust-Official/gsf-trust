@@ -94,7 +94,7 @@ export function ChangePasswordForm({ isForcedChange }: Props) {
 
       toast.success(
         isForcedChange
-          ? "Password set. Welcome to GSF Foundation."
+          ? "Password set. Welcome to GSF Trust."
           : "Password changed successfully."
       );
       router.push("/dashboard");
