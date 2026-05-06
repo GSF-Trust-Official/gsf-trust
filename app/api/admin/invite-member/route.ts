@@ -67,17 +67,19 @@ export async function POST(req: Request): Promise<NextResponse> {
       }),
     ]);
 
-    const inviteToken = await new SignJWT({ sub: newUserId, purpose: "set-password" })
+    // New users always have token_version = 0 (DB default).
+    const inviteToken = await new SignJWT({ sub: newUserId, purpose: "set-password", tokenVersion: 0 })
       .setProtectedHeader({ alg: "HS256" })
       .setIssuedAt()
       .setExpirationTime(INVITE_EXPIRY)
       .sign(getSecret());
 
-    const inviteUrl = `${APP_URL}/set-password?token=${inviteToken}`;
+    const inviteUrl  = `${APP_URL}/set-password?token=${inviteToken}`;
+    const safeName   = member.name.replace(/&/g,"&amp;").replace(/</g,"&lt;").replace(/>/g,"&gt;");
     void sendEmail({
       to: member.email,
       subject: "Your GSF Foundation account is ready",
-      html: `<p>Assalamu Alaikum ${member.name},</p>
+      html: `<p>Assalamu Alaikum ${safeName},</p>
 <p>You have been invited to the GSF Foundation member portal. Please set your password using the link below:</p>
 <p><a href="${inviteUrl}">Set Your Password</a></p>
 <p>This link expires in 48 hours.</p>

@@ -110,16 +110,16 @@ export async function insertExpense(
     userId:      string;
   }
 ): Promise<void> {
-  const { account, category, description, amount, date, reference, userId } = params;
+  const { account, category, description, amount, date, reference, notes, userId } = params;
   const id = generateId();
   const storedAmount = -Math.abs(amount);
 
   await db.batch([
     db.prepare(`
       INSERT INTO ledger_entries
-        (id, date, account, category, description, amount, reference, source_type, created_by)
-      VALUES (?, ?, ?, ?, ?, ?, ?, 'expense', ?)
-    `).bind(id, date, account, category, description, storedAmount, reference ?? null, userId),
+        (id, date, account, category, description, amount, reference, notes, source_type, created_by)
+      VALUES (?, ?, ?, ?, ?, ?, ?, ?, 'expense', ?)
+    `).bind(id, date, account, category, description, storedAmount, reference ?? null, notes ?? null, userId),
 
     auditStatement(db, {
       userId,
@@ -144,16 +144,16 @@ export async function insertInterest(
     userId:      string;
   }
 ): Promise<void> {
-  const { type, category, description, amount, date, reference, userId } = params;
+  const { type, category, description, amount, date, reference, notes, userId } = params;
   const id = generateId();
   const storedAmount = type === "credit" ? Math.abs(amount) : -Math.abs(amount);
 
   await db.batch([
     db.prepare(`
       INSERT INTO ledger_entries
-        (id, date, account, category, description, amount, reference, source_type, created_by)
-      VALUES (?, ?, 'interest', ?, ?, ?, ?, 'interest', ?)
-    `).bind(id, date, category, description, storedAmount, reference ?? null, userId),
+        (id, date, account, category, description, amount, reference, notes, source_type, created_by)
+      VALUES (?, ?, 'interest', ?, ?, ?, ?, ?, 'interest', ?)
+    `).bind(id, date, category, description, storedAmount, reference ?? null, notes ?? null, userId),
 
     auditStatement(db, {
       userId,
@@ -179,15 +179,15 @@ export async function updateEntry(
     before:      unknown;
   }
 ): Promise<void> {
-  const { id, category, description, amount, date, reference, userId, before } = params;
+  const { id, category, description, amount, date, reference, notes, userId, before } = params;
 
   await db.batch([
     db.prepare(`
       UPDATE ledger_entries
       SET category = ?, description = ?, amount = ?, date = ?,
-          reference = ?, updated_at = datetime('now')
+          reference = ?, notes = ?, updated_at = datetime('now')
       WHERE id = ?
-    `).bind(category, description, amount, date, reference ?? null, id),
+    `).bind(category, description, amount, date, reference ?? null, notes ?? null, id),
 
     auditStatement(db, {
       userId,

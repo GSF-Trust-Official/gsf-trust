@@ -31,8 +31,8 @@ function getSecret(): Uint8Array {
   return new TextEncoder().encode(s);
 }
 
-async function makeInviteToken(userId: string): Promise<string> {
-  return new SignJWT({ sub: userId, purpose: "set-password" })
+async function makeInviteToken(userId: string, tokenVersion: number): Promise<string> {
+  return new SignJWT({ sub: userId, purpose: "set-password", tokenVersion })
     .setProtectedHeader({ alg: "HS256" })
     .setIssuedAt()
     .setExpirationTime(INVITE_EXPIRY)
@@ -79,6 +79,20 @@ export async function POST(
         );
       }
 
+      // Validate the linked member exists and is active before binding.
+      if (parsed.data.linked_member_id) {
+        const linkedMember = await env.DB
+          .prepare("SELECT id FROM members WHERE id = ? AND status = 'active'")
+          .bind(parsed.data.linked_member_id)
+          .first<{ id: string }>();
+        if (!linkedMember) {
+          return NextResponse.json(
+            { error: "Linked member not found or inactive." },
+            { status: 404 }
+          );
+        }
+      }
+
       // Create the user account (must_change_password=1 until they set it via invite link).
       const tempHash = await hashPassword(crypto.randomUUID() + crypto.randomUUID());
       const newUserId = crypto.randomUUID().replace(/-/g, "");
@@ -103,12 +117,14 @@ export async function POST(
       ]);
 
       // Send invite email with set-password link.
-      const inviteToken = await makeInviteToken(newUserId);
-      const inviteUrl = `${APP_URL}/set-password?token=${inviteToken}`;
+      // New users always have token_version = 0 (DB default).
+      const inviteToken = await makeInviteToken(newUserId, 0);
+      const inviteUrl   = `${APP_URL}/set-password?token=${inviteToken}`;
+      const safeName    = request.name.replace(/&/g,"&amp;").replace(/</g,"&lt;").replace(/>/g,"&gt;");
       void sendEmail({
         to: request.email,
         subject: "Your GSF Foundation account is ready",
-        html: `<p>Assalamu Alaikum ${request.name},</p>
+        html: `<p>Assalamu Alaikum ${safeName},</p>
 <p>Your registration has been approved. Please set your password using the link below:</p>
 <p><a href="${inviteUrl}">Set Your Password</a></p>
 <p>This link expires in 48 hours.</p>
@@ -136,12 +152,16 @@ export async function POST(
       ]);
 
       // Notify the applicant politely.
+      const rejectName   = request.name.replace(/&/g,"&amp;").replace(/</g,"&lt;").replace(/>/g,"&gt;");
+      const rejectReason = parsed.data.rejection_reason
+        ? parsed.data.rejection_reason.replace(/&/g,"&amp;").replace(/</g,"&lt;").replace(/>/g,"&gt;")
+        : null;
       void sendEmail({
         to: request.email,
         subject: "GSF Foundation — Registration Update",
-        html: `<p>Assalamu Alaikum ${request.name},</p>
+        html: `<p>Assalamu Alaikum ${rejectName},</p>
 <p>Thank you for your interest in the GSF Foundation member portal.</p>
-<p>After review, we were unable to approve your registration at this time.${parsed.data.rejection_reason ? ` Reason: ${parsed.data.rejection_reason}` : ""}</p>
+<p>After review, we were unable to approve your registration at this time.${rejectReason ? ` Reason: ${rejectReason}` : ""}</p>
 <p>If you believe this is an error, please contact the Treasurer directly.</p>
 <p>JazakAllah Khair,<br>GSF Foundation</p>`,
         text: `Assalamu Alaikum ${request.name},\n\nWe were unable to approve your registration at this time.${parsed.data.rejection_reason ? `\nReason: ${parsed.data.rejection_reason}` : ""}\n\nJazakAllah Khair,\nGSF Foundation`,

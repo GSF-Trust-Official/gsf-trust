@@ -19,7 +19,9 @@ function fmtINR(amount: unknown): string {
 }
 
 function s(v: unknown): string {
-  return String(v ?? "");
+  const str = String(v ?? "");
+  // Neutralize spreadsheet formula injection.
+  return /^[=+\-@\t\r]/.test(str) ? `'${str}` : str;
 }
 
 function n(v: unknown): number {

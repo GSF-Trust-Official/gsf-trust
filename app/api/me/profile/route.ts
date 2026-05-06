@@ -49,6 +49,24 @@ export async function PATCH(req: Request): Promise<NextResponse> {
       .bind(user.memberId)
       .first();
 
+    // Guard email uniqueness across both members and users tables.
+    if (parsed.data.email !== undefined && parsed.data.email !== null) {
+      const memberConflict = await env.DB
+        .prepare("SELECT id FROM members WHERE email = ? AND id != ?")
+        .bind(parsed.data.email, user.memberId)
+        .first<{ id: string }>();
+      if (memberConflict) {
+        return NextResponse.json({ error: "Email already in use by another member." }, { status: 409 });
+      }
+      const userConflict = await env.DB
+        .prepare("SELECT id FROM users WHERE email = ? AND id != ?")
+        .bind(parsed.data.email, user.sub)
+        .first<{ id: string }>();
+      if (userConflict) {
+        return NextResponse.json({ error: "Email already in use by another account." }, { status: 409 });
+      }
+    }
+
     const updates: string[] = [];
     const binds: unknown[] = [];
     if (parsed.data.phone !== undefined) {
