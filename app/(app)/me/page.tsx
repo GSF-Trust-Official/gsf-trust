@@ -3,7 +3,6 @@ import { getSessionUser } from "@/lib/session";
 import { getCloudflareContext } from "@opennextjs/cloudflare";
 import { isMember } from "@/lib/roles";
 import Link from "next/link";
-import type { Subscription } from "@/types";
 
 function formatINR(n: number) {
   return new Intl.NumberFormat("en-IN", { style: "currency", currency: "INR", maximumFractionDigits: 0 }).format(n);

@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect, useCallback } from "react";
+import { useState, useEffect } from "react";
 import { toast } from "sonner";
 import { Users, Check, X, ChevronDown, ChevronUp } from "lucide-react";
 import { Button } from "@/components/ui/button";
@@ -19,19 +19,39 @@ export function RegistrationRequestsPanel({ members }: Props) {
   const [expanded,     setExpanded]     = useState<string | null>(null);
   const [linkMap,      setLinkMap]      = useState<Record<string, string>>({});
   const [rejectReason, setRejectReason] = useState<Record<string, string>>({});
+  // Incrementing this triggers a re-fetch without changing filter.
+  const [refreshKey,   setRefreshKey]   = useState(0);
 
-  const load = useCallback(async () => {
+  // Fetch runs when filter or refreshKey changes. setLoading(true) is always
+  // called from event handlers (changeFilter / refresh) so the effect body
+  // itself never calls setState synchronously.
+  useEffect(() => {
+    let cancelled = false;
+    fetch(`/api/admin/registrations?status=${filter}`)
+      .then((r) => r.json() as Promise<{ requests: RegistrationRequest[]; pending_count: number }>)
+      .then((data) => {
+        if (cancelled) return;
+        setRequests(data.requests ?? []);
+        setPendingCount(data.pending_count ?? 0);
+        setLoading(false);
+      })
+      .catch(() => {
+        if (cancelled) return;
+        toast.error("Failed to load registrations");
+        setLoading(false);
+      });
+    return () => { cancelled = true; };
+  }, [filter, refreshKey]);
+
+  function changeFilter(f: StatusFilter) {
     setLoading(true);
-    try {
-      const res  = await fetch(`/api/admin/registrations?status=${filter}`);
-      const data = await res.json() as { requests: RegistrationRequest[]; pending_count: number };
-      setRequests(data.requests ?? []);
-      setPendingCount(data.pending_count ?? 0);
-    } catch { toast.error("Failed to load registrations"); }
-    finally { setLoading(false); }
-  }, [filter]);
+    setFilter(f);
+  }
 
-  useEffect(() => { void load(); }, [load]);
+  function refresh() {
+    setLoading(true);
+    setRefreshKey((k) => k + 1);
+  }
 
   async function approve(id: string) {
     setActing(id);
@@ -44,7 +64,7 @@ export function RegistrationRequestsPanel({ members }: Props) {
       const data = await res.json() as { ok?: boolean; error?: string };
       if (!res.ok) { toast.error(data.error ?? "Failed"); return; }
       toast.success("Approved — invite email sent");
-      void load();
+      refresh();
     } catch { toast.error("Something went wrong"); }
     finally { setActing(null); }
   }
@@ -60,7 +80,7 @@ export function RegistrationRequestsPanel({ members }: Props) {
       const data = await res.json() as { ok?: boolean; error?: string };
       if (!res.ok) { toast.error(data.error ?? "Failed"); return; }
       toast.success("Registration rejected");
-      void load();
+      refresh();
     } catch { toast.error("Something went wrong"); }
     finally { setActing(null); }
   }
@@ -87,7 +107,7 @@ export function RegistrationRequestsPanel({ members }: Props) {
             <button
               key={s}
               type="button"
-              onClick={() => setFilter(s)}
+              onClick={() => changeFilter(s)}
               className={`px-3 py-1 rounded-full text-xs font-medium capitalize transition-colors ${
                 filter === s
                   ? "bg-primary text-white"

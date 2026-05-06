@@ -4,7 +4,6 @@ import { useEffect, useState } from "react";
 import { Building2, Smartphone, Copy, CheckCircle2 } from "lucide-react";
 import { toast } from "sonner";
 import QRCode from "qrcode";
-import { cn } from "@/lib/utils";
 
 interface Props {
   banking: Record<string, string>;
