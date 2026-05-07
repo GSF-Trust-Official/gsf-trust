@@ -11,6 +11,7 @@ import { toast } from "sonner";
 interface Settings {
   receipt_subscriptions_enabled?: string;
   receipt_donations_enabled?:     string;
+  treasurer_email?: string;
   bank_name?:      string;
   account_name?:   string;
   account_number?: string;
@@ -37,6 +38,7 @@ export function SettingsClient({ initialSettings }: Props) {
   const [saving,   setSaving]   = useState<string | null>(null);
   const [backing,  setBacking]  = useState(false);
   const [lastBackup, setLastBackup] = useState<BackupResult | null>(null);
+  const [treasurerEmail, setTreasurerEmail] = useState(initialSettings.treasurer_email ?? "");
 
   // Banking form local state
   const [banking, setBanking] = useState({
@@ -52,11 +54,15 @@ export function SettingsClient({ initialSettings }: Props) {
   async function patchSettings(updates: Partial<Settings>) {
     const key = Object.keys(updates)[0] ?? "save";
     setSaving(key);
+    // Strip undefined values before sending — API rejects unknown keys
+    const body = Object.fromEntries(
+      Object.entries(updates).filter(([, v]) => v !== undefined)
+    );
     try {
       const res = await fetch("/api/settings", {
         method:  "PATCH",
         headers: { "Content-Type": "application/json" },
-        body:    JSON.stringify(updates),
+        body:    JSON.stringify(body),
       });
       if (!res.ok) throw new Error("Failed to save");
       setSettings((prev) => ({ ...prev, ...updates }));
@@ -214,6 +220,32 @@ export function SettingsClient({ initialSettings }: Props) {
           Backups older than 30 weeks are automatically removed. The weekly automated backup
           runs every Sunday at midnight IST.
         </p>
+
+        {/* Treasurer email for backup confirmations */}
+        <div className="space-y-1.5">
+          <Label htmlFor="treasurer-email">Treasurer Email</Label>
+          <p className="text-xs text-on-surface-variant">
+            Backup confirmation emails and new registration alerts are sent to this address.
+          </p>
+          <div className="flex gap-2">
+            <Input
+              id="treasurer-email"
+              type="email"
+              value={treasurerEmail}
+              onChange={(e) => setTreasurerEmail(e.target.value)}
+              placeholder="treasurer@example.com"
+              className="bg-surface-container border-0 shadow-none"
+            />
+            <Button
+              variant="outline"
+              onClick={() => patchSettings({ treasurer_email: treasurerEmail.trim() || undefined })}
+              disabled={saving === "treasurer_email"}
+              className="shrink-0"
+            >
+              {saving === "treasurer_email" ? <Loader2 className="size-4 animate-spin" /> : "Save"}
+            </Button>
+          </div>
+        </div>
 
         {lastBackup && (
           <div className="rounded-lg bg-success-container/30 border border-success/20 p-4 space-y-2">

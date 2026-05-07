@@ -38,6 +38,7 @@ export function EditEntryModal({ open, entry, account, categories, onOpenChange,
   const [amount,      setAmount]      = useState(String(Math.abs(entry.amount)));
   const [date,        setDate]        = useState(entry.date);
   const [reference,   setReference]   = useState(entry.reference ?? "");
+  const [notes,       setNotes]       = useState(entry.notes ?? "");
   const [, startTransition] = useTransition();
 
   // Sync form fields when a different entry is opened
@@ -49,6 +50,7 @@ export function EditEntryModal({ open, entry, account, categories, onOpenChange,
         setAmount(String(Math.abs(entry.amount)));
         setDate(entry.date);
         setReference(entry.reference ?? "");
+        setNotes(entry.notes ?? "");
       });
     }
   // eslint-disable-next-line react-hooks/exhaustive-deps
@@ -72,7 +74,7 @@ export function EditEntryModal({ open, entry, account, categories, onOpenChange,
           amount: amt,
           date,
           reference: reference.trim() || null,
-          notes: null,
+          notes: notes.trim() || null,
         }),
       });
       const data = await res.json() as { error?: string };
@@ -155,6 +157,18 @@ export function EditEntryModal({ open, entry, account, categories, onOpenChange,
               placeholder="Voucher no., ref…"
               value={reference}
               onChange={(e) => setReference(e.target.value)}
+            />
+          </div>
+
+          {/* Notes */}
+          <div className="space-y-1.5">
+            <Label>Notes <span className="font-normal text-on-surface-variant">(optional)</span></Label>
+            <textarea
+              rows={2}
+              value={notes}
+              onChange={(e) => setNotes(e.target.value)}
+              placeholder="Reason for edit, correction notes…"
+              className="w-full rounded-lg bg-surface-container border-0 px-3 py-2 text-sm placeholder:text-on-surface-variant/50 focus:outline-none focus-visible:ring-2 focus-visible:ring-ring/50 resize-none"
             />
           </div>
 
