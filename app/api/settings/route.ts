@@ -9,6 +9,7 @@ import { z } from "zod";
 const SETTING_KEYS = [
   "receipt_subscriptions_enabled",
   "receipt_donations_enabled",
+  "treasurer_email",
   "bank_name",
   "account_name",
   "account_number",
@@ -21,6 +22,7 @@ const SETTING_KEYS = [
 const UpdateSettingsSchema = z.object({
   receipt_subscriptions_enabled: z.enum(["0", "1"]).optional(),
   receipt_donations_enabled:     z.enum(["0", "1"]).optional(),
+  treasurer_email: z.string().email("Must be a valid email").max(200).optional(),
   bank_name:      z.string().max(100).optional(),
   account_name:   z.string().max(100).optional(),
   account_number: z.string().max(30).optional(),

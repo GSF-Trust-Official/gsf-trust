@@ -70,6 +70,8 @@ export interface LedgerEntry {
   deleted_by: string | null;
   created_at: string;
   created_by: string | null;
+  updated_at: string | null;
+  notes: string | null;
 }
 
 export interface Donation {
