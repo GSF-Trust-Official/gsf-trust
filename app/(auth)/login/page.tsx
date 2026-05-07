@@ -16,7 +16,7 @@ export default function LoginPage() {
         <div className="relative z-10 flex flex-col items-center text-center max-w-xs space-y-7">
           <div className="p-2 bg-white/10 rounded-3xl backdrop-blur-sm">
             <Image
-              src="/gsf-logo.png"
+              src="/gsf-logo-def.jpeg"
               alt="GSF Trust"
               width={148}
               height={148}
@@ -42,7 +42,7 @@ export default function LoginPage() {
           {/* Mobile logo */}
           <div className="lg:hidden flex flex-col items-center mb-10 space-y-3">
             <Image
-              src="/gsf-logo.png"
+              src="/gsf-logo-def.jpeg"
               alt="GSF Trust"
               width={72}
               height={72}
