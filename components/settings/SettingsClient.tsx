@@ -4,7 +4,7 @@ import { useState } from "react";
 import { Label }  from "@/components/ui/label";
 import { Input }  from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
-import { Loader2, DatabaseBackup, Mail, Building2, CheckCircle2 } from "lucide-react";
+import { Loader2, DatabaseBackup, Mail, Building2, CheckCircle2, AlertTriangle } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { toast } from "sonner";
 
@@ -22,13 +22,15 @@ interface Settings {
 }
 
 interface BackupResult {
-  ok:       boolean;
-  date:     string;
-  files:    number;
-  rows:     Record<string, number>;
-  pruned:   number;
-  driveUrl?: string;
-  manual:   boolean;
+  ok:           boolean;
+  date:         string;
+  files:        number;
+  rows:         Record<string, number>;
+  pruned:       number;
+  driveUrl?:    string;
+  driveReady:   boolean;
+  driveErrors?: string[];
+  manual:       boolean;
 }
 
 interface Props { initialSettings: Settings }
@@ -248,35 +250,72 @@ export function SettingsClient({ initialSettings }: Props) {
         </div>
 
         {lastBackup && (
-          <div className="rounded-lg bg-success-container/30 border border-success/20 p-4 space-y-2">
-            <div className="flex items-center gap-2 text-success font-semibold text-sm">
-              <CheckCircle2 className="size-4" />
-              Backup complete — {lastBackup.date}
-            </div>
-            <div className="grid grid-cols-2 gap-x-8 gap-y-1 text-xs text-on-surface-variant font-mono">
-              {Object.entries(lastBackup.rows).map(([table, count]) => (
-                <div key={table} className="flex justify-between">
-                  <span>{table}</span>
-                  <span className="font-semibold">{count.toLocaleString("en-IN")}</span>
+          <div className="space-y-3">
+            {/* Drive error banner */}
+            {lastBackup.driveErrors && lastBackup.driveErrors.length > 0 && (
+              <div className="rounded-lg bg-error-container border border-error/20 p-4 space-y-1.5">
+                <div className="flex items-center gap-2 text-error font-semibold text-sm">
+                  <AlertTriangle className="size-4 shrink-0" />
+                  Google Drive upload failed
                 </div>
-              ))}
+                <ul className="text-xs text-error/80 space-y-0.5 font-mono">
+                  {lastBackup.driveErrors.map((e, i) => (
+                    <li key={i}>{e}</li>
+                  ))}
+                </ul>
+                <p className="text-xs text-on-surface-variant pt-1">
+                  Check that the service account email in your JSON key has been added as an <strong>Editor</strong> on the Google Drive folder.
+                </p>
+              </div>
+            )}
+
+            {/* Drive not configured warning */}
+            {!lastBackup.driveReady && (
+              <div className="rounded-lg bg-warning-container border border-warning/20 p-3 flex items-start gap-2">
+                <AlertTriangle className="size-4 text-warning shrink-0 mt-0.5" />
+                <p className="text-xs text-on-surface-variant">
+                  <strong>Google Drive not configured.</strong> Add <code>GOOGLE_DRIVE_SERVICE_ACCOUNT_JSON</code> and <code>GOOGLE_DRIVE_FOLDER_ID</code> as Secrets in the Cloudflare Dashboard to enable uploads.
+                </p>
+              </div>
+            )}
+
+            {/* Success summary */}
+            <div className={cn(
+              "rounded-lg p-4 space-y-2 border",
+              lastBackup.driveErrors?.length ? "bg-surface-container border-outline-variant" : "bg-success-container/30 border-success/20"
+            )}>
+              <div className={cn(
+                "flex items-center gap-2 font-semibold text-sm",
+                lastBackup.driveErrors?.length ? "text-on-surface" : "text-success"
+              )}>
+                <CheckCircle2 className="size-4" />
+                Backup complete — {lastBackup.date}
+              </div>
+              <div className="grid grid-cols-2 gap-x-8 gap-y-1 text-xs text-on-surface-variant font-mono">
+                {Object.entries(lastBackup.rows).map(([table, count]) => (
+                  <div key={table} className="flex justify-between">
+                    <span>{table}</span>
+                    <span className="font-semibold">{count.toLocaleString("en-IN")}</span>
+                  </div>
+                ))}
+              </div>
+              <p className="text-xs text-on-surface-variant">
+                {lastBackup.files} file(s) uploaded · {lastBackup.pruned} old file(s) pruned
+                {lastBackup.driveUrl && (
+                  <>
+                    {" · "}
+                    <a
+                      href={lastBackup.driveUrl}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className="text-primary underline"
+                    >
+                      View in Drive
+                    </a>
+                  </>
+                )}
+              </p>
             </div>
-            <p className="text-xs text-on-surface-variant">
-              {lastBackup.files} file(s) uploaded · {lastBackup.pruned} old file(s) pruned
-              {lastBackup.driveUrl && (
-                <>
-                  {" · "}
-                  <a
-                    href={lastBackup.driveUrl}
-                    target="_blank"
-                    rel="noopener noreferrer"
-                    className="text-primary underline"
-                  >
-                    View in Drive
-                  </a>
-                </>
-              )}
-            </p>
           </div>
         )}
 
