@@ -84,7 +84,9 @@ async function runBackup(req: Request, isManual: boolean): Promise<Response> {
   const dateStr  = new Date().toISOString().slice(0, 10); // YYYY-MM-DD
   const rowCounts: Record<string, number> = {};
   const uploads: string[] = [];
+  const driveErrors: string[] = [];
   let firstUrl: string | undefined;
+  const driveReady = isDriveConfigured(env);
 
   for (const table of TABLES) {
     try {
@@ -95,10 +97,16 @@ async function runBackup(req: Request, isManual: boolean): Promise<Response> {
       const filename = `${BACKUP_PREFIX}${dateStr}_${table}.csv`;
       const content  = new TextEncoder().encode(csv);
 
-      if (isDriveConfigured(env)) {
-        const url = await uploadToDrive(content, filename, "text/csv", env);
-        if (!firstUrl) firstUrl = url;
-        uploads.push(filename);
+      if (driveReady) {
+        try {
+          const url = await uploadToDrive(content, filename, "text/csv", env);
+          if (!firstUrl) firstUrl = url;
+          uploads.push(filename);
+        } catch (uploadErr) {
+          const msg = uploadErr instanceof Error ? uploadErr.message : String(uploadErr);
+          console.error(`Backup: Drive upload failed for ${table}:`, msg);
+          driveErrors.push(`${table}: ${msg}`);
+        }
       }
     } catch (err) {
       console.error(`Backup: failed to export ${table}:`, err);
@@ -107,7 +115,7 @@ async function runBackup(req: Request, isManual: boolean): Promise<Response> {
 
   // Prune old backups
   let pruned = 0;
-  if (isDriveConfigured(env)) {
+  if (driveReady && driveErrors.length === 0) {
     try { pruned = await pruneOldBackups(env); } catch { /* non-fatal */ }
   }
 
@@ -132,13 +140,15 @@ async function runBackup(req: Request, isManual: boolean): Promise<Response> {
   }
 
   const result = {
-    ok:       true,
-    date:     dateStr,
-    files:    uploads.length,
-    rows:     rowCounts,
+    ok:           true,
+    date:         dateStr,
+    files:        uploads.length,
+    rows:         rowCounts,
     pruned,
-    driveUrl: firstUrl,
-    manual:   isManual,
+    driveUrl:     firstUrl,
+    driveReady,
+    driveErrors:  driveErrors.length > 0 ? driveErrors : undefined,
+    manual:       isManual,
   };
 
   console.info("Backup complete:", result);
